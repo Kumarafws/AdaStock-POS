@@ -1,1446 +1,607 @@
 # AdaStock — Product Requirements Document (PRD)
 
-**Version:** 1.0  
-**Status:** Draft / Development Baseline  
-**Product:** AdaStock  
-**Document Type:** Product Requirements Document
+**Version:** 2.0 (Final Architecture & Specification Baseline)  
+**Status:** Approved for Implementation  
+**Product:** AdaStock (Inventory Management & Point of Sale System)  
+**Document Type:** Product Requirements Document  
+**Architecture:** Fullstack Laravel 13 Monolith (Blade Engine + Alpine.js) + MVC & Clean OOP  
 
 ---
 
 ## 1. Product Overview
 
-**AdaStock** adalah sistem **Inventory Management dan Point of Sale (POS)** untuk bisnis retail skala kecil hingga menengah.
+**AdaStock** adalah sistem **Inventory Management dan Point of Sale (POS)** terintegrasi yang dirancang untuk bisnis retail skala kecil hingga menengah (multi-store dan multi-warehouse).
 
-Sistem membantu bisnis mengelola produk, supplier, purchasing, receiving, inventory, multi-store/multi-warehouse, stock transfer, stock opname, stock adjustment, POS, discount, multiple payment method, receipt, return, refund recording, reporting, notification, dan audit trail.
-
-AdaStock menggunakan **Stock Ledger / Stock Movement** sebagai fondasi untuk membuat setiap perubahan persediaan dapat ditelusuri.
-
----
-
-## 2. Background
-
-Bisnis retail memiliki aktivitas yang saling berhubungan: barang dibeli dari supplier, diterima di store/warehouse, disimpan sebagai persediaan, dipindahkan antar lokasi, lalu dijual melalui POS. Barang juga dapat dikembalikan, rusak, hilang, atau mengalami selisih ketika stock opname.
-
-Pencatatan manual atau spreadsheet dapat menyebabkan:
-
-- stok sistem tidak sesuai stok fisik,
-- perubahan stok sulit ditelusuri,
-- barang habis tanpa diketahui,
-- kesalahan penerimaan barang,
-- sulit memantau stok antar lokasi,
-- kesalahan pencatatan penjualan,
-- sulit menangani return,
-- sulit mengetahui performa penjualan,
-- sulit melakukan audit.
-
-AdaStock menghubungkan seluruh proses tersebut dalam satu sistem.
+Sistem ini menghubungkan seluruh siklus operasional retail dalam satu alur data tunggal:
+1. **Purchasing & Goods Receiving** (Pengadaan barang dari supplier dengan kalkulasi HPP otomatis).
+2. **Inventory Ledger** (Pencatatan mutasi stok berbasis *Stock Movement* yang *immutable* dan dapat diaudit).
+3. **Multi-Location & Transfer** (Manajemen stok antar Toko, Gudang Pusat, dan Karantina Barang Rusak).
+4. **Shift Kasir & POS** (Operasional kasir cepat, buka/tutup laci kas, split payment, multi-satuan, otorisasi diskon/void berjenjang).
+5. **Stock Opname & Karantina** (Pemeriksaan fisik stok, penanganan barang rusak untuk dimusnahkan atau diretur ke supplier).
+6. **Pelaporan Keuangan & Laba Kotor** (Laporan laba kotor berbasis *Moving Average Costing*, rekonsiliasi kasir, dan audit trail).
 
 ---
 
-## 3. Problem Statement
+## 2. Prinsip Utama Sistem (Core System Principles)
 
-### 3.1 Inventory Accuracy
-Bisnis membutuhkan stok yang akurat untuk setiap store dan warehouse.
-
-### 3.2 Stock Traceability
-Setiap perubahan stok harus dapat ditelusuri berdasarkan jenis aktivitas, jumlah, lokasi, waktu, user, dan referensi transaksi.
-
-### 3.3 Purchasing Visibility
-Bisnis perlu mengetahui barang yang dipesan, jumlah yang diharapkan, jumlah yang diterima, dan jumlah outstanding.
-
-### 3.4 Multi-location Management
-Bisnis dengan beberapa store/warehouse membutuhkan visibilitas stok per lokasi dan mekanisme transfer.
-
-### 3.5 Sales & Inventory Synchronization
-Penjualan harus otomatis memengaruhi stok tanpa update manual.
-
-### 3.6 Operational Control
-Stock adjustment, discount, return, dan perubahan master data membutuhkan permission dan audit trail.
+1. **Every Inventory Change Must Be Explainable**:  
+   Tidak ada perubahan stok langsung via `UPDATE stock`. Setiap penambahan atau pengurangan wajib memiliki baris mutasi (*Stock Movement*) dengan data: *What, How much, Where, Why, Who, When, dan Reference Transaction*.
+2. **Single Source of Truth dalam Base Unit**:  
+   Meskipun barang dijual atau dibeli dalam satuan karton, dus, atau pak, seluruh perhitungan saldo inventori dan mutasi di database selalu dikonversi dan disimpan dalam **Base Unit** (satuan dasar terkecil, misal: Pcs).
+3. **Moving Average Costing (HPP Bergerak)**:  
+   Harga Pokok Penjualan (HPP) dihitung ulang secara otomatis saat barang masuk dan dikunci secara permanen di setiap baris transaksi penjualan untuk menjaga integritas laporan historis laba rugi.
+4. **Cashier Location & Shift Strictness**:  
+   Kasir terikat pada satu toko fisik tertentu saat bertugas. Transaksi POS hanya boleh memotong stok toko bersangkutan. Kasir wajib membuka register shift kas sebelum bertransaksi dan melakukan rekonsiliasi fisik kas saat tutup shift.
+5. **Strict Authorization & Anti-Fraud**:  
+   Tindakan rawan manipulasi (Void transaksi setelah struk terbit, diskon manual di atas batas wajar, stock adjustment) wajib meminta otorisasi Supervisor/Manager menggunakan PIN/Password otorisasi.
+6. **MVC & Clean OOP Architecture**:  
+   Controller tetap tipis (*Thin Controller*). Seluruh logika bisnis berada pada *Service Classes / Action Classes*, validasi berada pada *Form Requests*, dan status data menggunakan *PHP 8.3 Backed Enums*.
 
 ---
 
-## 4. Product Goals
+## 3. Scope & Non-Goals
 
-1. Menyediakan sistem inventory terpusat.
-2. Menghubungkan purchasing dengan inventory.
-3. Menghubungkan POS dengan inventory.
-4. Menyediakan stock ledger yang dapat diaudit.
-5. Mendukung multi-store dan multi-warehouse.
-6. Menyediakan stock transfer.
-7. Mendukung return dan refund recording.
-8. Menyediakan reporting operasional.
-9. Menerapkan role-based access control.
-10. Menjadi project pembelajaran Laravel dengan business logic realistis.
-11. Mempelajari database transaction, concurrency, Events, Jobs, Queues, Scheduler, Cache, Notifications, dan testing.
+### 3.1 In Scope
+- Manajemen Pengguna, Hak Akses Berbasis Role (Admin, Manager, Cashier), dan PIN Supervisor.
+- Master Data: Produk, Kategori, Brand, Supplier, Multi-Satuan (UOM Conversion), Barcode multi-unit.
+- Multi-Lokasi: Toko (*Store*), Gudang Pusat (*Warehouse*), Gudang Karantina Barang Rusak (*Quarantine*).
+- Manajemen Stok: Saldo stok, riwayat mutasi (*Stock Movement*), penyesuaian stok (*Stock Adjustment*).
+- Pengadaan: Purchase Order (PO), Penerimaan Bertahap (*Partial Goods Receiving*), Retur Pembelian (*Return to Vendor*).
+- Transfer Stok antar Lokasi dengan status transit (*In-Transit*).
+- Stock Opname berkala dengan mekanisme persetujuan (*Approval*) dan penyesuaian otomatis.
+- Modul POS (Point of Sale) responsif keyboard/touch, pencarian/scan barcode, multi-satuan, diskon bertingkat, split payment, dan cetak struk/PDF.
+- Manajemen Shift Kasir: Buka Kasir (*Open Register*), Kas Masuk/Keluar (*Cash Drawer Movement*), Tutup Kasir (*Close Register* & Rekonsiliasi).
+- Penanganan Barang Rusak: Karantina barang rusak, opsi pemusnahan (*Write-off/Disposal*), atau retur ke supplier.
+- Laporan Lengkap: Penjualan, Laba Kotor (Net Sales - COGS), Perputaran Stok, Pengadaan, Rekonsiliasi Kasir, dan Log Audit.
 
----
-
-## 5. Non-Goals
-
-AdaStock tidak mencakup pada fase ini:
-
-- payment gateway eksternal,
-- integrasi bank langsung,
-- accounting/General Ledger penuh,
-- payroll,
-- HR management,
-- CRM lengkap,
-- marketplace integration,
-- shipping provider integration.
-
-Sistem tetap mencatat metode pembayaran seperti Cash, Card, Bank Transfer, QRIS, dan E-Wallet tanpa memproses pembayaran eksternal.
+### 3.2 Non-Goals
+- Payment Gateway otomatis pihak ketiga (transaksi non-tunai dicatat sebagai konfirmasi bukti bayar fisik/manual EDC/QRIS).
+- Modul Akuntansi Penuh / General Ledger / Pajak Faktur Pajak PPN e-Faktur.
+- Modul Penggajian (Payroll) & Human Resources (HR).
+- Integrasi Marketplace (Shopee, Tokopedia, TikTok Shop) & Ekspedisi kurir instan.
 
 ---
 
-# 6. Target Users & Roles
+## 4. User Roles & Permission Matrix
 
-AdaStock menggunakan tiga role utama.
+AdaStock mengoperasikan 3 tingkatan peran utama dengan otorisasi ketat di level backend (Policies, Form Requests, dan Middleware):
 
-## 6.1 Admin
-Fokus pada administrasi sistem:
-- user management,
-- role,
-- store,
-- warehouse,
-- master data,
-- konfigurasi sistem,
-- akses keseluruhan.
-
-## 6.2 Manager
-Fokus pada operasional:
-- inventory,
-- purchasing,
-- supplier,
-- stock adjustment,
-- stock opname,
-- transfer,
-- sales monitoring,
-- reports,
-- return,
-- discount control.
-
-## 6.3 Cashier
-Fokus pada transaksi:
-- POS,
-- cart,
-- checkout,
-- payment,
-- receipt,
-- sales history,
-- customer return sesuai permission.
+| Modul / Fitur | Admin | Manager | Cashier | Catatan Otorisasi |
+|---|:---:|:---:|:---:|---|
+| **User & Role Management** | Full | No | No | Hanya Admin yang dapat menambah/mengedit akun & role |
+| **System Configuration** | Full | No | No | Konfigurasi toko, nama perusahaan, footer struk |
+| **Master Data (Produk, Kategori, Satuan)** | Full | Full | View | Kasir hanya dapat melihat katalog untuk referensi |
+| **Supplier Management** | Full | Full | No | Akses data supplier dan kontak vendor |
+| **Store & Warehouse Management** | Full | Limited | View | Manager hanya dapat mengelola lokasi tugasnya |
+| **Purchase Order & Goods Receiving** | Full | Full | No | Dibuat dan diverifikasi oleh Manager/Admin |
+| **Stock Transfer Request & Approval** | Full | Full | No | Pengiriman & penerimaan antar lokasi |
+| **Stock Adjustment & Opname** | Full | Full | No | Penyesuaian stok fisik dan selisih |
+| **POS Checkout** | Full | Full | Full | Kasir menjalankan transaksi penjualan toko aktifnya |
+| **Shift Kasir (Open/Close Drawer)** | Full | Full | Full | Kasir mengelola sesi shift laci kas masing-masing |
+| **Void Transaksi (Setelah Struk Terbit)**| Full | Auth | PIN Required | Kasir wajib meminta input PIN Supervisor/Manager |
+| **Diskon Manual Khusus (> 5% / Rp20k)** | Full | Auth | PIN Required | Kasir terbatas diskon kecil; selebihnya butuh PIN |
+| **Sales Return & Refund Recording** | Full | Full | Limited | Kasir hanya bisa proses retur dengan validasi struk lama |
+| **Laporan Finansial & Laba Kotor** | Full | Full | No | Kasir hanya bisa melihat ringkasan shift miliknya sendiri |
+| **Audit Trail & System Logs** | Full | View | No | Rekaman riwayat aktivitas dan aksi sensitif |
 
 ---
 
-## 7. Permission Overview
-
-| Feature | Admin | Manager | Cashier |
-|---|---:|---:|---:|
-| Dashboard | Yes | Yes | Yes |
-| Product Management | Yes | Yes | View |
-| Category Management | Yes | Yes | View |
-| Supplier Management | Yes | Yes | No |
-| Store Management | Yes | Limited | View |
-| Warehouse Management | Yes | Limited | No |
-| Purchase Order | Yes | Yes | No |
-| Goods Receiving | Yes | Yes | No |
-| Inventory | Yes | Yes | View |
-| Stock Adjustment | Yes | Yes | No |
-| Stock Opname | Yes | Yes | No |
-| Stock Transfer | Yes | Yes | No |
-| POS | Yes | Yes | Yes |
-| Discount Management | Yes | Yes | No |
-| Sales History | Yes | Yes | Own / Allowed |
-| Return | Yes | Yes | Allowed |
-| Reports | Yes | Yes | Limited |
-| User Management | Yes | No | No |
-| System Configuration | Yes | No | No |
-| Audit Log | Yes | Yes | Limited |
-
-Authorization wajib diterapkan di backend.
-
----
-
-# 8. Core Business Flow
+## 5. Alur Bisnis Inti (Core Business Flow)
 
 ```text
-Supplier
-    ↓
-Purchase Order
-    ↓
-Goods Receiving
-    ↓
-Inventory
-    ↓
-Stock Ledger
-    ↓
-┌──────────────────────────────┐
-│                              │
-▼                              ▼
-Transfer                     POS Sale
-│                              │
-▼                              ▼
-Other Location              Payment
-                               │
-                               ▼
-                            Sale
-                               │
-                               ▼
-                         Stock Decrease
-                               │
-                               ▼
-                           Stock Ledger
-                               │
-                               ▼
-                            Return
-                               │
-                               ▼
-                         Stock Handling
-                               │
-                               ▼
-                            Reporting
+                                  SUPPLIER
+                                     │
+                                     ▼
+                            PURCHASE ORDER (PO)
+                                     │
+                                     ▼
+                         GOODS RECEIVING (Partial/Full)
+                                     │
+                    ┌────────────────┴────────────────┐
+                    ▼                                 ▼
+           Update Stok Fisik                  Hitung Ulang HPP
+           (Base Unit Pcs)                 (Moving Average Cost)
+                    │                                 │
+                    └────────────────┬────────────────┘
+                                     ▼
+                            STOCK LEDGER ENGINE
+                                     │
+     ┌───────────────────────────────┼───────────────────────────────┐
+     ▼                               ▼                               ▼
+STOCK TRANSFER                  KASIR BUKA SHIFT                STOCK OPNAME
+(Store / Gudang)                (Modal Awal Kas)             (Hitung Fisik Stok)
+     │                               │                               │
+     ▼                               ▼                               ▼
+Status IN-TRANSIT               TRANSAKSI POS                   Selisih Stok
+     │                        (Scan Barcode / Qty)                   │
+     ▼                               │                               ▼
+Penerimaan Tujuan                    ▼                         Approval Manager
+     │                         Hitung Diskon                         │
+     ▼                     (Otorisasi jika > limit)                  ▼
+Update Stok Tujuan                   │                        Update Penyesuaian
+                                     ▼
+                               BAYAR PESANAN
+                         (Tunai / Split Payment)
+                                     │
+                                     ▼
+                          CETAK STRUK TRANSAKSI
+                                     │
+                    ┌────────────────┴────────────────┐
+                    ▼                                 ▼
+           Potong Stok Toko                   Kunci Nilai COGS
+           (Base Unit Pcs)                   & Catat Laba Kotor
+                    │                                 │
+                    └────────────────┬────────────────┘
+                                     │
+                    ┌────────────────┴────────────────┐
+                    ▼                                 ▼
+           TUTUP SHIFT KASIR                 RETUR PENJUALAN
+         (Rekonsiliasi Kas Laci)             (Dari Pelanggan)
+                                                      │
+                                             ┌────────┴────────┐
+                                             ▼                 ▼
+                                        Kondisi BAIK     Kondisi RUSAK
+                                             │                 │
+                                             ▼                 ▼
+                                        Kembali ke      GUDANG KARANTINA
+                                         Stok Jual             │
+                                                        ┌──────┴──────┐
+                                                        ▼             ▼
+                                                   Pemusnahan    Retur Vendor
+                                                  (Write-off)        (RTV)
 ```
 
 ---
 
-# 9. Product Management
+## 6. Spesifikasi Fitur & Aturan Bisnis Detail
 
-Product minimal memiliki:
-
-- name,
-- SKU,
-- barcode,
-- category,
-- brand,
-- unit,
-- purchase price,
-- selling price,
-- minimum stock,
-- reorder point,
-- product image,
-- active status.
-
-### Business Rules
-
-1. SKU harus unik.
-2. Barcode harus unik jika diisi.
-3. Produk inactive tidak dapat digunakan untuk transaksi baru.
-4. Produk yang sudah memiliki transaksi tidak boleh dihapus secara hard delete.
-5. Harga tidak boleh negatif.
-6. Minimum stock tidak boleh negatif.
+### 6.1 Master Data Produk & Multi-Satuan (UOM Conversion)
+Setiap produk dicatat dengan spesifikasi:
+- **Atribut Produk**: Nama, SKU unik, Brand, Kategori, Sub-kategori, Gambar, Min Stock, Reorder Point, Deskripsi, Status Aktif.
+- **Base Unit (Satuan Terkecil)**: Satuan mutlak untuk penyimpanan stok di sistem (misal: `Pcs`, `Botol`, `Gram`).
+- **Tabel Konversi Satuan (`product_units`)**:
+  - `unit_name`: Nama satuan (misal: `Dus`, `Pak`, `Lusin`).
+  - `conversion_factor`: Jumlah Base Unit per satuan ini (misal: 1 Dus = 24 Pcs, maka faktor = 24).
+  - `barcode`: Barcode opsional khusus untuk kemasan tersebut (barcode dus berbeda dengan barcode pcs).
+  - `selling_price`: Harga jual khusus untuk satuan tersebut (misal: Eceran Rp10.000/pcs; Beli 1 Dus Rp220.000).
+- **Aturan Bisnis Produk**:
+  1. SKU tidak boleh duplikat. Barcode per satuan tidak boleh bentrok dengan barcode manapun.
+  2. Produk yang sudah pernah memiliki riwayat transaksi/mutasi stok **tidak boleh di-hard delete** (hanya boleh dinonaktifkan/Soft Delete).
+  3. Seluruh saldo inventori (`inventories.quantity`) dan catatan mutasi (`stock_movements.quantity`) **wajib dalam Base Unit**. Jika kasir menjual "2 Dus" (isi 24), maka sistem menyimpan item penjualan "2 Dus", namun mengurangi inventori sebanyak **48 Pcs**.
 
 ---
 
-# 10. Category, Brand & Unit
+### 6.2 Metode Penilaian Persediaan & HPP (Moving Average Costing)
+Sistem menggunakan metode **Moving Average Cost** (Rata-rata Bergerak) yang dihitung otomatis secara sistemik:
 
-Master data:
-
-- Category,
-- Subcategory,
-- Brand,
-- Unit.
-
-Master data yang telah digunakan transaksi sebaiknya dinonaktifkan daripada dihapus secara hard delete.
-
----
-
-# 11. Supplier Management
-
-Supplier memiliki:
-
-- name,
-- contact person,
-- phone,
-- email,
-- address,
-- tax/identification information jika diperlukan,
-- status.
-
-Supplier yang memiliki riwayat purchase tidak boleh dihapus secara hard delete.
+1. **Kalkulasi Saat Penerimaan Barang (`GoodsReceipt`)**:
+   $$\text{HPP Baru} = \frac{(\text{Stok Tersedia Saat Ini} \times \text{HPP Lama}) + (\text{Qty Diterima} \times \text{Harga Beli Baru})}{\text{Stok Tersedia Saat Ini} + \text{Qty Diterima}}$$
+2. **Pencatatan Saat Checkout Penjualan**:
+   - Saat kasir menyelesaikan pesanan, nilai HPP produk pada detik itu disalin ke `sale_items.cogs_per_unit`.
+   - $\text{Total COGS Item} = \text{sale_items.quantity\_in\_base\_unit} \times \text{sale_items.cogs\_per\_unit}$.
+   - $\text{Laba Kotor Item} = \text{sale_items.subtotal} - \text{Total COGS Item}$.
+3. **Keuntungan**: Laporan laba kotor masa lalu tidak akan pernah terdistorsi meskipun di masa depan harga beli supplier naik drastis.
 
 ---
 
-# 12. Store & Warehouse
+### 6.3 Lokasi Inventori & Karantina Barang Rusak (Damaged Stock)
+Sistem membagi lokasi menjadi 3 tipe:
+1. `STORE`: Toko retail tempat kasir melayani transaksi langsung.
+2. `WAREHOUSE`: Gudang penyimpanan atau gudang induk/distribusi.
+3. `QUARANTINE`: Lokasi penampungan barang rusak/cacat/kadaluarsa.
 
-AdaStock mendukung multi-location.
-
-```text
-Location
-├── Store
-└── Warehouse
-```
-
-Contoh:
-
-```text
-Central Warehouse
-Jakarta Store
-Bandung Store
-Yogyakarta Store
-```
-
-Setiap location memiliki inventory sendiri.
+**Aturan Penanganan Barang Rusak**:
+1. Barang rusak hasil retur penjualan, barang rusak di rak toko, atau temuan selisih minus saat opname dipindahkan ke lokasi `QUARANTINE` dengan tipe mutasi `ADJUSTMENT_OUT` (lokasi asal) dan `TRANSFER_IN` (karantina).
+2. Stok di `QUARANTINE` berstatus non-sellable (tidak akan pernah muncul di katalog kasir POS).
+3. **Tindak Lanjut Barang Karantina**:
+   - **Pemusnahan (Disposal / Write-off)**: Dibuat Berita Acara Pemusnahan oleh Manager. Stok karantina dipotong dengan mutasi `LOSS_DISPOSAL` dan dicatat sebagai biaya beban kerugian barang rusak.
+   - **Retur ke Supplier (Return to Vendor - RTV)**: Dibuat dokumen Retur Pembelian ke Supplier. Stok karantina dipotong dengan mutasi `PURCHASE_RETURN` untuk ditukar barang baru atau nota kredit pengurangan hutang.
 
 ---
 
-# 13. Inventory
-
-Inventory dapat dilihat berdasarkan:
-
-- product,
-- location,
-- stock quantity,
-- reserved quantity jika digunakan,
-- available quantity,
-- minimum stock,
-- reorder point.
-
-Formula:
-
-```text
-Available Stock = Stock Quantity - Reserved Quantity
-```
-
-Jika reservation belum digunakan, available stock dapat sama dengan stock quantity.
+### 6.4 Pengadaan (Purchasing) & Penerimaan Barang (Goods Receiving)
+1. **Alur PO**:
+   `DRAFT` $\rightarrow$ `SUBMITTED` $\rightarrow$ `APPROVED` $\rightarrow$ `ORDERED` $\rightarrow$ `PARTIALLY_RECEIVED` $\rightarrow$ `RECEIVED` $\rightarrow$ `CANCELLED`.
+2. **Penerimaan Barang Parsial (*Partial Receiving*)**:
+   - Supplier seringkali mengirimkan barang bertahap.
+   - Setiap kali kiriman tiba, Manager membuat lembar `GoodsReceipt` baru yang mereferensikan PO tersebut.
+   - Input fisik barang yang datang dicatat (`received_qty`).
+   - Sisa barang dihitung: $\text{Outstanding Qty} = \text{Ordered Qty} - \text{Total Received Qty}$.
+   - Status PO otomatis beralih ke `PARTIALLY_RECEIVED` jika masih ada sisa, atau `RECEIVED` jika seluruh pesanan telah terpenuhi.
+3. **Mutasi Stok**: Stok bertambah HANYA saat `GoodsReceipt` di-approve/disubmit, bukan saat PO dibuat.
 
 ---
 
-# 14. Stock Ledger / Stock Movement
-
-Stock Movement adalah bagian inti AdaStock.
-
-Movement type minimal:
-
-```text
-PURCHASE_RECEIPT
-SALE
-SALE_RETURN
-PURCHASE_RETURN
-TRANSFER_IN
-TRANSFER_OUT
-ADJUSTMENT_IN
-ADJUSTMENT_OUT
-STOCK_OPNAME
-DAMAGE
-LOSS
-```
-
-Setiap movement menyimpan:
-
-- product,
-- location,
-- quantity,
-- direction,
-- movement type,
-- reference type,
-- reference ID,
-- actor,
-- timestamp.
-
-Contoh:
-
-```text
-+100 PURCHASE_RECEIPT
--5  SALE
--2  DAMAGE
-+10 ADJUSTMENT_IN
--20 TRANSFER_OUT
-```
-
-Stock movement harus immutable untuk user biasa. Koreksi dilakukan dengan correction movement, bukan mengubah histori lama.
+### 6.5 Transfer Stok Antar Lokasi
+1. **Alur Transfer**:
+   `DRAFT` $\rightarrow$ `REQUESTED` $\rightarrow$ `APPROVED` $\rightarrow$ `IN_TRANSIT` $\rightarrow$ `RECEIVED` $\rightarrow$ `CANCELLED`.
+2. **Prinsip In-Transit**:
+   - Ketika transfer disetujui dan barang dikirim dari lokasi asal (*Shipment*), stok lokasi asal **langsung berkurang** dengan mutasi `TRANSFER_OUT`.
+   - Barang berstatus `IN_TRANSIT`. Barang ini belum masuk dan belum bisa dijual di lokasi tujuan.
+   - Saat lokasi tujuan menerima barang (*Receiving*), staf tujuan mengonfirmasi jumlah fisik yang diterima. Stok tujuan bertambah dengan mutasi `TRANSFER_IN`.
+   - Jika terdapat selisih saat penerimaan (misal barang hilang di jalan), selisih dicatat sebagai `DAMAGE` atau `LOSS`.
 
 ---
 
-# 15. Purchase Order
+### 6.6 Manajemen Shift Kasir (Cash Register / Cash Drawer)
+Modul penting untuk mencegah manipulasi uang fisik di meja kasir:
 
-Purchase Order memiliki:
-
-- PO number,
-- supplier,
-- destination location,
-- order date,
-- expected delivery date,
-- status,
-- notes,
-- items,
-- total.
-
-Status:
-
-```text
-DRAFT
-SUBMITTED
-APPROVED
-ORDERED
-PARTIALLY_RECEIVED
-RECEIVED
-CANCELLED
-```
+1. **Buka Register (Open Shift)**:
+   - Kasir login dan memilih shift.
+   - Kasir wajib menginput **Modal Awal Kas (Opening Cash Float)** di laci (misal: Rp200.000 uang pecahan untuk kembalian).
+   - Kasir tidak dapat membuka layar transaksi POS jika belum membuka shift.
+2. **Pergerakan Kas Kasir (Cash In / Cash Out)**:
+   - Pengeluaran kecil tak terduga (misal: beli kantong plastik darurat, bayar air galon toko) wajib dicatat sebagai *Cash Out* dengan alasan dan nominal.
+   - Tambahan modal kembalian dari manager dicatat sebagai *Cash In*.
+3. **Tutup Register (Close Shift & Rekonsiliasi)**:
+   - Di akhir giliran kerja, kasir menekan tombol "Tutup Kasir".
+   - Kasir menghitung uang fisik di laci dan menginput nominal total uang tunai yang dihitung (*Actual Cash Count*).
+   - Sistem secara otomatis menghitung:
+     $$\text{Expected Cash} = \text{Modal Awal} + \text{Total Penjualan Tunai} + \text{Total Cash In} - \text{Total Cash Out}$$
+     $$\text{Selisih (Discrepancy)} = \text{Actual Cash Count} - \text{Expected Cash}$$
+   - Jika ada selisih (Lebih/Kurang Kas), sistem mencatat nilai selisih dan mewajibkan catatan keterangan.
+   - Jika selisih melebihi batas toleransi (misal > Rp10.000), sistem mewajibkan verifikasi dan tanda tangan elektronik/PIN Supervisor.
+   - Sistem mencetak **Lembar Laporan Tutup Shift (X/Z Report)**.
 
 ---
 
-# 16. Goods Receiving
+### 6.7 Operasional POS (Point of Sale) & Desain Interaktif
 
-Barang yang datang tidak otomatis diasumsikan sesuai PO.
-
-Contoh:
-
-```text
-Ordered: 100
-Received: 80
-Outstanding: 20
-```
-
-Flow:
-
-```text
-Purchase Order
-      ↓
-Goods Receipt
-      ↓
-Validate Quantity
-      ↓
-Increase Inventory
-      ↓
-Create Stock Movement
-```
-
-Partial receiving wajib didukung.
+1. **Antarmuka Kasir Ergonomis**:
+   - Dibangun dengan Blade Components + **Alpine.js** untuk reaktivitas state keranjang belanja di memori browser.
+   - **Shortcut Keyboard**:
+     - `F1`: Fokus ke kolom Pencarian / Scan Barcode.
+     - `F2`: Buka modal diskon manual / voucher.
+     - `F4`: Hold / Simpan sementara transaksi keranjang (*Pending Cart*).
+     - `F8`: Bayar Cepat Uang Pas Tunai.
+     - `F9`: Buka modal Pembayaran Lengkap (Split Payment).
+     - `ESC`: Tutup modal popup.
+   - Input barcode mendukung USB/Bluetooth Barcode Scanner standar (auto-enter menambah item ke cart).
+2. **Multi-Payment & Split Payment**:
+   - Metode pembayaran yang didukung: `CASH`, `DEBIT_CARD`, `CREDIT_CARD`, `QRIS`, `BANK_TRANSFER`, `E_WALLET`.
+   - Kasir dapat membagi tagihan (Split Payment), contoh: Total belanja Rp350.000 dibayar Tunai Rp100.000 dan QRIS Rp250.000.
+   - Aturan validasi:
+     $$\sum \text{Payment Methods} \ge \text{Grand Total}$$
+   - Untuk pembayaran tunai berlebih, sistem menghitung uang kembalian (*Change*). Pembayaran non-tunai tidak boleh melebihi nilai sisa tagihan.
 
 ---
 
-# 17. Purchase Return
+### 6.8 Aturan Otorisasi Void & Diskon Manual (Pencegahan Fraud)
 
-```text
-Purchase
-   ↓
-Purchase Return
-   ↓
-Stock Decrease
-   ↓
-Stock Movement
-```
-
-Return menyimpan supplier, product, quantity, reason, reference purchase/receipt, actor, dan timestamp.
-
----
-
-# 18. Stock Transfer
-
-Transfer digunakan untuk memindahkan barang antar location.
-
-```text
-Source Location
-      ↓
-Transfer Request
-      ↓
-Approval
-      ↓
-Shipment
-      ↓
-IN_TRANSIT
-      ↓
-Destination Receiving
-      ↓
-RECEIVED
-```
-
-Status:
-
-```text
-DRAFT
-REQUESTED
-APPROVED
-IN_TRANSIT
-PARTIALLY_RECEIVED
-RECEIVED
-CANCELLED
-```
-
-Source stock berkurang saat shipment dan destination stock bertambah saat receiving.
-
-Barang in-transit tidak dihitung sebagai available stock di destination sebelum receiving.
+1. **Pembatalan Item di Keranjang (Pre-Checkout Void)**:
+   - Kasir bebas menghapus atau mengubah kuantitas item di keranjang belanja sebelum tombol bayar diproses, tanpa membutuhkan izin supervisor.
+2. **Void Transaksi Setelah Struk Terbit (Post-Payment Void)**:
+   - Terjadi jika pelanggan membatalkan pesanan sesaat setelah struk tercetak atau ada kesalahan fatal input metode bayar.
+   - **Syarat Otorisasi**:
+     - Wajib memasukkan **PIN Supervisor / Manager**.
+     - Hanya boleh dilakukan pada **hari yang sama dan shift kasir yang sedang aktif**.
+     - Kasir wajib memilih alasan void (*Salah input barang*, *Pelanggan batal*, *Transaksi ganda*).
+   - **Dampak Sistemik**:
+     - Status transaksi penjualan beralih menjadi `VOIDED`.
+     - Stok barang otomatis dikembalikan ke inventori toko kasir dengan mutasi `SALE_VOID`.
+     - Nominal pembayaran tunai dikeluarkan kembali dari pencatatan laci kas aktif.
+     - Masuk ke tabel **Audit Log Void** yang dapat diinspeksi oleh Pemilik Toko.
+3. **Diskon Manual di Layar Kasir**:
+   - Diskon kupon/promo resmi sistem: Kasir langsung memilih dari dropdown diskon aktif.
+   - Diskon manual dadakan (*Custom Discount*):
+     - Kasir diberikan toleransi diskon maksimal **5% atau Rp20.000** per struk.
+     - Jika diskon manual melebihi batas tersebut, layar otomatis memunculkan modal: **"Otorisasi Supervisor Dibutuhkan"** dan wajib memasukkan PIN Supervisor.
 
 ---
 
-# 19. Stock Adjustment
-
-Digunakan untuk:
-
-- barang rusak,
-- barang hilang,
-- koreksi kesalahan,
-- stock correction.
-
-Wajib memiliki product, location, quantity, direction, reason, actor, timestamp.
-
-Manager/Admin dapat melakukan adjustment. Cashier tidak dapat.
+### 6.9 Retur Penjualan dari Pelanggan (Sales Return)
+1. Pelanggan membawa struk belanja lama.
+2. Kasir mencari nomor transaksi penjualan terkait (`sale_number`).
+3. Sistem memvalidasi item dan sisa kuantitas yang berhak diretur (*Eligible Return Qty*).
+4. Kasir memilih kondisi barang:
+   - **Kondisi BAIK (GOOD)**: Barang otomatis masuk kembali ke stok jual toko kasir dengan mutasi `SALE_RETURN`.
+   - **Kondisi RUSAK (DAMAGED)**: Barang **dilarang masuk ke stok jual**, melainkan otomatis dialihkan ke lokasi `QUARANTINE` (Gudang Karantina Barang Rusak).
+5. Kasir mencatat metode pengembalian dana (*Refund Method*), misal pengembalian tunai dari laci kasir atau voucher belanja.
 
 ---
 
-# 20. Stock Opname
-
-```text
-Create Stock Opname
-       ↓
-System Stock
-       ↓
-Physical Count
-       ↓
-Calculate Difference
-       ↓
-Review
-       ↓
-Approve
-       ↓
-Create Adjustment Movement
-```
-
-Contoh:
-
-```text
-System Stock: 100
-Physical:      97
-Difference:    -3
-```
-
-Stock opname memiliki audit trail.
+### 6.10 Stock Opname Berkala
+1. Manager membuat sesi opname untuk lokasi tertentu (Toko / Gudang).
+2. Sistem mengambil *snapshot* data saldo sistem saat sesi dibuka (*System Stock*).
+3. Staf toko melakukan penghitungan fisik (*Blind Count* atau *Targeted Count*) dan menginput angka riil (*Physical Count*).
+4. Sistem menghitung selisih: $\text{Difference} = \text{Physical Count} - \text{System Stock}$.
+5. Manager/Admin memeriksa laporan selisih nilai rupiah (*Variance Value*).
+6. Saat Manager menekan tombol **Approve & Adjust**:
+   - Sistem secara otomatis menerbitkan mutasi penyesuaian `ADJUSTMENT_IN` (jika fisik lebih banyak) atau `ADJUSTMENT_OUT` (jika fisik kurang).
+   - Saldo inventori sistem menjadi sama persis dengan fisik.
+   - Sesi opname dikunci secara permanen sebagai dokumen audit.
 
 ---
 
-# 21. Low Stock & Reorder
+## 7. Arsitektur Teknis (Laravel 13 Monolith)
 
-Jika:
+### 7.1 Tech Stack Resmi
 
-```text
-Current Stock <= Reorder Point
-```
-
-produk ditandai LOW_STOCK.
-
-Jika:
-
-```text
-Current Stock = 0
-```
-
-produk ditandai OUT_OF_STOCK.
-
-Scheduler dapat digunakan untuk pengecekan berkala dan notification kepada Manager/Admin.
+| Layer / Komponen | Teknologi Terpilih | Keterangan |
+|---|---|---|
+| **Framework Backend** | **Laravel 13** | Monolitik modern dengan PHP 8.3 / 8.4 |
+| **Templating Engine** | **Laravel Blade** | Blade View Components modular dan berdaya guna tinggi |
+| **Frontend Interactivity**| **Alpine.js + Vanilla JS** | Reaktivitas cepat untuk POS Cart, Modal PIN, dan Hotkey |
+| **Styling & UI Design** | **Tailwind CSS + Custom Theme** | Bersih, elegan, modern, kontras tinggi, anti-AI Slop |
+| **Database Utama** | **PostgreSQL / MySQL 8.0+** | Integritas foreign keys, ACID Transactions, Pessimistic Locking |
+| **In-Memory Cache & Queue**| **Redis** | Antrean background jobs, cache master data, session |
+| **PDF & Struk Generator** | **Barryvdh / DomPDF** | Generate cetak struk kasir 58mm/80mm thermal & laporan A4 |
+| **Authentication** | **Laravel Session Auth** | Native web guard, proteksi CSRF, session per device |
+| **Authorization** | **Gates, Policies & Middleware** | Penjagaan hak akses role dan verifikasi PIN Supervisor |
+| **Testing Framework** | **Pest PHP** | Feature testing untuk transaksi stok dan checkout |
 
 ---
 
-# 22. POS
+### 7.2 Struktur Arsitektur Bersih (Clean OOP & Layered MVC)
 
-Flow:
+Aplikasi dibangun dengan memisahkan tanggung jawab kode secara tegas (*Separation of Concerns*):
 
 ```text
-Open POS
-    ↓
-Select / Scan Product
-    ↓
-Add to Cart
-    ↓
-Apply Discount
-    ↓
-Calculate Total
-    ↓
-Select Payment Method
-    ↓
-Checkout
-    ↓
-Validate Stock
-    ↓
-Create Sale
-    ↓
-Decrease Stock
-    ↓
-Create Stock Movement
-    ↓
-Generate Receipt
+app/
+├── Actions/                  # Single-action classes untuk alur simpel
+│   └── CalculateProductPriceAction.php
+├── Enums/                    # PHP 8.3 Backed Enums
+│   ├── LocationType.php      # STORE, WAREHOUSE, QUARANTINE
+│   ├── MovementType.php      # PURCHASE_RECEIPT, SALE, SALE_VOID, TRANSFER, etc.
+│   ├── OrderStatus.php       # DRAFT, SUBMITTED, APPROVED, CANCELLED
+│   ├── PaymentMethod.php     # CASH, DEBIT_CARD, CREDIT_CARD, QRIS, etc.
+│   ├── ReturnCondition.php   # GOOD, DAMAGED
+│   ├── ShiftStatus.php       # OPEN, CLOSED
+│   └── UserRole.php          # ADMIN, MANAGER, CASHIER
+├── Events/                   # Domain events untuk decoupled side-effects
+│   ├── GoodsReceivedEvent.php
+│   ├── LowStockDetectedEvent.php
+│   ├── SaleCompletedEvent.php
+│   └── SaleVoidedEvent.php
+├── Http/
+│   ├── Controllers/          # Thin Controllers (hanya delegasi & return view/response)
+│   │   ├── InventoryController.php
+│   │   ├── PosController.php
+│   │   ├── PurchaseOrderController.php
+│   │   ├── ShiftController.php
+│   │   └── StockOpnameController.php
+│   ├── Middleware/           # EnsureCashierHasOpenShift, CheckRole, etc.
+│   └── Requests/             # Form Requests untuk validasi ketat
+│       ├── CheckoutRequest.php
+│       ├── OpenShiftRequest.php
+│       └── SupervisorAuthRequest.php
+├── Listeners/                # Event listeners (bisa di-queue)
+│   ├── DecrementStockOnSaleListener.php
+│   ├── SendLowStockNotificationListener.php
+│   └── WriteAuditLogListener.php
+├── Models/                   # Eloquent Models (Relasi, Mutator, Scope)
+│   ├── Inventory.php
+│   ├── Product.php
+│   ├── ProductUnit.php
+│   ├── Sale.php
+│   ├── SaleItem.php
+│   ├── Shift.php
+│   └── StockMovement.php
+├── Policies/                 # Laravel Policies untuk otorisasi per entitas
+├── Services/                 # Pure OOP Domain Logic Layer
+│   ├── CostingService.php    # Perhitungan Moving Average HPP
+│   ├── InventoryService.php  # Pemotongan & penambahan stok + movement record
+│   ├── PosCheckoutService.php# DB Transaction, lockForUpdate, sale creation
+│   ├── ShiftService.php      # Buka/tutup shift & rekonsiliasi uang kas
+│   └── StockTransferService.php
+└── View/
+    └── Components/           # Blade View Components reusable
+        ├── Badge.php
+        ├── Modal.php
+        ├── StatCard.php
+        └── Table.php
 ```
 
 ---
 
-# 23. Cart & Discount
+### 7.3 Concurrency & Database Transaction Handling
+Operasi vital retail (terutama saat 2 kasir menjual barang terakhir secara bersamaan) dilindungi dengan:
 
-Cart memiliki:
+```php
+// Contoh implementasi di dalam PosCheckoutService:
+DB::transaction(function () use ($dto, $cashier) {
+    // 1. Pessimistic Locking pada stok toko kasir
+    $inventory = Inventory::where('product_id', $dto->productId)
+        ->where('location_id', $cashier->current_store_id)
+        ->lockForUpdate()
+        ->firstOrFail();
 
-- product,
-- quantity,
-- unit price,
-- discount,
-- subtotal.
+    if ($inventory->quantity < $dto->requestedBaseUnitQty) {
+        throw new InsufficientStockException("Stok tidak mencukupi untuk item: {$dto->productName}");
+    }
 
-Formula:
+    // 2. Buat Transaksi Penjualan & Baris Item (kunci HPP saat ini)
+    $sale = Sale::create([...]);
+    
+    // 3. Potong stok fisik
+    $inventory->decrement('quantity', $dto->requestedBaseUnitQty);
 
-```text
-Subtotal = Quantity × Unit Price
-```
-
-Discount mendukung:
-
-- fixed amount,
-- percentage,
-- product discount,
-- cart/order discount.
-
-Discount memiliki:
-
-- name,
-- type,
-- value,
-- start date,
-- end date,
-- active status,
-- optional minimum purchase,
-- optional maximum discount.
-
-Cashier hanya dapat menggunakan discount aktif dan diizinkan.
-
----
-
-# 24. Multiple Payment Method
-
-Metode pembayaran minimal:
-
-```text
-CASH
-DEBIT_CARD
-CREDIT_CARD
-BANK_TRANSFER
-QRIS
-E_WALLET
-```
-
-Split payment didukung.
-
-Contoh:
-
-```text
-Total: Rp500.000
-Cash:  Rp200.000
-QRIS:  Rp300.000
-```
-
-Business rule:
-
-```text
-Sum(Payments) = Grand Total
-```
-
-Checkout tidak boleh selesai jika pembayaran kurang dari total.
-
-Untuk cash:
-
-```text
-Change = Cash Received - Total
+    // 4. Catat Mutasi Buku Besar (Stock Movement)
+    StockMovement::create([
+        'product_id' => $dto->productId,
+        'location_id' => $cashier->current_store_id,
+        'quantity' => -$dto->requestedBaseUnitQty,
+        'movement_type' => MovementType::SALE,
+        'reference_type' => Sale::class,
+        'reference_id' => $sale->id,
+        'cogs_unit' => $inventory->product->average_cogs,
+        'created_by' => $cashier->id,
+    ]);
+});
 ```
 
 ---
 
-# 25. Sales
+## 8. Panduan Desain UI/UX (Anti-AI Slop, Modern & Ergonomis)
 
-Sale memiliki:
+Untuk memastikan tampilan sistem terlihat berkelas, tidak kaku, tidak seperti template AI generik, dan nyaman digunakan berjam-jam oleh kasir dan manager:
 
-- sale number,
-- store,
-- cashier,
-- customer optional,
-- subtotal,
-- discount,
-- tax jika diaktifkan,
-- grand total,
-- status,
-- created at.
-
-Status:
-
-```text
-COMPLETED
-VOIDED
-PARTIALLY_RETURNED
-RETURNED
-```
-
-Sale completed tidak boleh diedit langsung. Correction dilakukan melalui void/return.
+### 8.1 Prinsip Desain Visual
+1. **Tipografi Modern Humanis**: Menggunakan Google Font **Plus Jakarta Sans** atau **Inter**. Font memiliki keterbacaan tinggi dengan dukungan angka desimal/rupiah tabular (`tabular-nums`) agar angka keuangan tersusun rata kanan dengan rapi.
+2. **Palet Warna Terkurasi (Tailored HSL Palette)**:
+   - **Background & Card**: Netral modern (*Slate/Zinc 50, 100, 800, 900*). Bukan putih silau murni dan bukan hitam pekat. Permukaan kartu memiliki kontras lembut dengan border tipis elegan (`border-slate-200 / border-slate-800`).
+   - **Aksen Fungsional**:
+     - *Emerald (Hijau Zamrud)*: Status Berhasil, Lunas, Kas Masuk, Stok Aman.
+     - *Amber (Kuning Keemasan)*: Peringatan Stok Menipis, Menunggu Persetujuan Supervisor.
+     - *Rose / Crimson (Merah Elegan)*: Tindakan Berbahaya, Void Transaksi, Barang Rusak, Selisih Kurang Kas.
+     - *Indigo / Electric Blue*: Aksen navigasi utama, tombol Checkout, dan tab aktif.
+3. **Ergonomi Layar POS Kasir**:
+   - Layout 2 Kolom:
+     - **Kolom Kiri (65%)**: Search bar autofocus besar, filter kategori berbasis chip/pill yang cepat diklik, dan grid kartu produk dengan foto tajam, nama jelas, indikator stok toko, dan tombol multi-satuan (Pcs/Dus).
+     - **Kolom Kanan (35%)**: Ringkasan struk keranjang (*Sticky Panel*). Setiap item memiliki pengatur qty cepat (+ / -), subtotal per baris, potongan diskon, dan total bayar dengan ukuran teks besar (misal text-3xl font-bold).
+     - **Tombol Bayar Raksasa**: Tombol "Bayar / Checkout (F9)" dengan tinggi minimum 56px, warna mencolok dan kontras, ramah layar sentuh maupun keyboard enter.
 
 ---
 
-# 26. Receipt
-
-Receipt dapat:
-
-- ditampilkan,
-- di-download,
-- di-print.
-
-Format:
-
-- HTML printable receipt,
-- PDF.
-
-PDF dapat dibuat menggunakan DomPDF.
-
-Receipt berisi store, sale number, date, cashier, items, subtotal, discount, total, payment methods, dan change.
-
----
-
-# 27. Sales Return
-
-Flow:
+## 9. Skema Relasi Database Inti (Data Model Blueprint)
 
 ```text
-Sale
- ↓
-Return
- ↓
-Select Items
- ↓
-Quantity
- ↓
-Reason
- ↓
-Validate
- ↓
-Process Return
- ↓
-Create Stock Movement
- ↓
-Record Refund
-```
-
-Kondisi barang:
-
-```text
-GOOD
-DAMAGED
-```
-
-GOOD dapat kembali ke sellable inventory. DAMAGED tidak boleh otomatis masuk sellable inventory.
-
-Return quantity tidak boleh melebihi quantity eligible.
-
----
-
-# 28. Refund Recording
-
-Tidak ada payment gateway.
-
-Refund hanya dicatat di sistem.
-
-Contoh:
-
-```text
-Return Amount: Rp150.000
-Refund Method: CASH
-```
-
-Refund memiliki reference return.
-
----
-
-# 29. Reporting
-
-Admin dan Manager dapat melihat:
-
-### Sales Report
-- total sales,
-- transaction count,
-- sales by date,
-- sales by store,
-- sales by cashier,
-- sales by category,
-- sales by product,
-- payment method.
-
-### Inventory Report
-- stock by location,
-- stock movement,
-- low stock,
-- out of stock,
-- inventory value.
-
-### Purchase Report
-- purchase volume,
-- purchase value,
-- supplier,
-- receiving status.
-
-### Profit Report
-
-```text
-Gross Profit = Net Sales - Cost of Goods Sold
-```
-
-Metode COGS harus ditentukan konsisten pada implementasi.
-
-### Return Report
-- return count,
-- return value,
-- return reason,
-- returned products.
-
----
-
-# 30. Audit Log
-
-Aktivitas penting dicatat, misalnya:
-
-```text
-Admin created product.
-Manager created purchase order.
-Manager approved stock adjustment.
-Cashier completed sale.
-Manager processed return.
-Admin changed user role.
-```
-
-Audit log menyimpan:
-
-- actor,
-- action,
-- entity type,
-- entity ID,
-- old values jika relevan,
-- new values jika relevan,
-- timestamp.
-
-Audit log tidak dapat diedit user biasa.
-
----
-
-# 31. Notification
-
-Gunakan Laravel Database Notifications untuk MVP.
-
-Contoh:
-
-- Low stock.
-- Out of stock.
-- Purchase order approved.
-- Goods receipt completed.
-- Transfer received.
-- Stock opname requires review.
-- Return processed.
-
-Email notification dapat menjadi pengembangan berikutnya.
-
----
-
-# 32. Advanced Laravel Requirements
-
-AdaStock sengaja menggunakan fitur Laravel advanced.
-
-## Database Transactions
-
-Operasi berikut wajib transactional:
-
-### Sale
-Create Sale → Create Sale Items → Create Payments → Decrease Stock → Create Stock Movements → Create Activity Log.
-
-### Goods Receipt
-Create Receipt → Update PO → Increase Stock → Create Stock Movement → Create Activity Log.
-
-### Transfer Receiving
-Create Receiving → Increase Destination Stock → Update Transfer → Create Stock Movement.
-
-### Return
-Create Return → Create Return Items → Update Sale Return State → Update Stock → Create Stock Movement → Create Refund Record.
-
-## Concurrency
-
-Checkout harus aman terhadap concurrent transactions.
-
-Gunakan transaction dan pessimistic locking pada stock record ketika diperlukan.
-
-## Events & Listeners
-
-Gunakan events untuk side effects.
-
-Contoh:
-
-```text
-SaleCompleted
-    ↓
-Listeners
-    ├── CreateStockMovement
-    ├── SendNotification
-    └── GenerateReceipt
-```
-
-Side effect yang sesuai dapat dipindahkan ke queue.
-
-## Jobs & Queues
-
-Gunakan Redis sebagai queue backend.
-
-Contoh job:
-
-- Generate receipt.
-- Send email.
-- Send notification.
-- Generate report.
-- Process scheduled low-stock check.
-
-## Scheduler
-
-Gunakan Laravel Scheduler untuk:
-
-- check low stock,
-- daily sales summary,
-- weekly report,
-- monthly sales summary.
-
-## Cache
-
-Redis digunakan untuk data relatif stabil seperti active categories, payment methods, store configuration, dan dashboard summary jika diperlukan.
-
-Cache harus memiliki invalidation strategy.
-
----
-
-# 33. Authentication & Authorization
-
-Gunakan Laravel Sanctum.
-
-Gunakan:
-
-- Middleware,
-- Policies,
-- Gates.
-
-Backend adalah source of truth.
-
-Contoh:
-
-```text
-Cashier → Can create sale.
-Cashier → Cannot adjust stock.
-Manager → Can adjust stock.
-Admin   → Can manage users.
-```
-
-Frontend hanya memberikan UX; authorization wajib divalidasi backend.
-
----
-
-# 34. REST API
-
-Gunakan API version:
-
-```text
-/api/v1
-```
-
-Domain endpoint:
-
-```text
-/api/v1/auth
-/api/v1/products
-/api/v1/categories
-/api/v1/suppliers
-/api/v1/locations
-/api/v1/inventory
-/api/v1/stock-movements
-/api/v1/purchases
-/api/v1/goods-receipts
-/api/v1/transfers
-/api/v1/sales
-/api/v1/payments
-/api/v1/returns
-/api/v1/discounts
-/api/v1/reports
-/api/v1/users
-/api/v1/notifications
-```
-
-Gunakan Laravel API Resources untuk response konsisten.
-
----
-
-# 35. Frontend Architecture
-
-Stack:
-
-- React
-- TypeScript
-- Vite
-- React Router
-- Material UI
-- TanStack Query
-- Zustand
-- Axios
-- React Hook Form
-- Zod
-- Recharts
-
-Recommended structure:
-
-```text
-src/
-├── components/
-├── pages/
-│   ├── admin/
-│   ├── manager/
-│   └── cashier/
-├── layouts/
-├── hooks/
-├── services/
-├── stores/
-├── types/
-├── utils/
-└── routes/
+users
+├── id
+├── name
+├── username / email
+├── password
+├── role (Enum: ADMIN, MANAGER, CASHIER)
+├── supervisor_pin (Hashed, untuk Manager/Admin)
+├── assigned_store_id (Foreign Key ke locations, khusus kasir)
+└── status (ACTIVE, INACTIVE)
+
+locations
+├── id
+├── name (misal: "Toko Cabang Malioboro", "Gudang Pusat", "Gudang Karantina")
+├── type (Enum: STORE, WAREHOUSE, QUARANTINE)
+├── address
+├── phone
+└── is_active
+
+products
+├── id
+├── sku (Unik)
+├── name
+├── category_id
+├── brand_id
+├── base_unit_name (misal: "Pcs")
+├── average_cogs (Moving Average HPP saat ini)
+├── default_selling_price
+├── min_stock
+├── reorder_point
+├── image_path
+└── is_active
+
+product_units (Multi-Satuan)
+├── id
+├── product_id
+├── unit_name (misal: "Dus", "Pak")
+├── conversion_factor (misal: 24)
+├── barcode (Opsional unik per satuan)
+└── selling_price (Harga khusus satuan tersebut)
+
+inventories (Saldo Stok per Lokasi dalam Base Unit)
+├── id
+├── product_id
+├── location_id
+├── quantity (Total saldo fisik dalam Base Unit)
+└── UNIQUE(product_id, location_id)
+
+stock_movements (Buku Besar Mutasi - IMMUTABLE)
+├── id
+├── product_id
+├── location_id
+├── quantity (+ atau - dalam Base Unit)
+├── movement_type (Enum: PURCHASE_RECEIPT, SALE, SALE_VOID, TRANSFER_IN, etc.)
+├── reference_type (Nama Model, misal: App\Models\Sale)
+├── reference_id (ID Transaksi terkait)
+├── cogs_per_unit (HPP per Base Unit saat mutasi)
+├── notes
+├── created_by (User ID)
+└── created_at
+
+shifts (Sesi Kasir)
+├── id
+├── cashier_id (User ID)
+├── store_id (Location ID)
+├── opened_at
+├── closed_at (Nullable)
+├── opening_cash_float (Modal awal laci)
+├── expected_cash (Dihitung sistem)
+├── actual_cash_count (Dihitung fisik kasir)
+├── discrepancy (Selisih)
+├── status (OPEN, CLOSED)
+├── supervisor_approved_by (Nullable)
+└── notes
+
+sales
+├── id
+├── sale_number (Format: SLS/YYYYMMDD/XXXX)
+├── store_id (Location ID)
+├── cashier_id (User ID)
+├── shift_id (Shift ID aktif)
+├── customer_name (Nullable)
+├── subtotal
+├── discount_amount
+├── grand_total
+├── total_cogs (Akumulasi HPP transaksi ini)
+├── total_profit (Grand Total - Total COGS)
+├── status (COMPLETED, VOIDED)
+├── void_reason (Nullable)
+├── voided_by (Supervisor User ID, Nullable)
+├── voided_at (Nullable)
+└── created_at
+
+sale_items
+├── id
+├── sale_id
+├── product_id
+├── product_unit_id (Nullable jika pakai base unit)
+├── unit_name
+├── unit_conversion_factor
+├── quantity_in_unit (Jumlah dalam satuan beli, misal: 2 Dus)
+├── quantity_in_base_unit (Jumlah dalam base unit, misal: 48 Pcs)
+├── unit_selling_price
+├── subtotal
+├── cogs_per_unit (HPP Base Unit saat transaksi)
+└── item_profit
+
+sale_payments
+├── id
+├── sale_id
+├── payment_method (Enum: CASH, QRIS, DEBIT, TRANSFER, etc.)
+├── amount_paid
+├── change_given
+└── reference_number (Nomor Approval EDC / Ref QRIS)
 ```
 
 ---
 
-# 36. POS UX
+## 10. Rencana Pengujian & Quality Assurance
 
-POS memprioritaskan kecepatan transaksi.
+Pengujian dilakukan secara komprehensif menggunakan **Pest PHP**:
 
-```text
-┌─────────────────────────────────────────┐
-│ Search / Barcode                        │
-├─────────────────────┬───────────────────┤
-│ Products            │ Cart              │
-│ Product A           │ Product A × 2     │
-│ Product B           │ Product B × 1     │
-│ Product C           │                   │
-│                     │ Subtotal          │
-│                     │ Discount          │
-│                     │ Total             │
-│                     │ [Checkout]        │
-└─────────────────────┴───────────────────┘
-```
-
-Barcode scanner berbasis kamera dapat menjadi fitur lanjutan.
+1. **Inventory & Costing Tests**:
+   - Tes penerimaan barang: Stok bertambah, mutasi tercatat, HPP Moving Average terhitung akurat.
+   - Tes batas stok: Penjualan ditolak jika stok kurang dari permintaan (*No Negative Stock*).
+   - Tes *pessimistic locking*: Menjamin tidak terjadi *race condition* saat dua request checkout terjadi di detik yang sama.
+2. **POS & Shift Tests**:
+   - Kasir tidak dapat bertransaksi tanpa membuka shift.
+   - Transaksi POS sukses memotong stok toko bersangkutan secara tepat dalam base unit.
+   - Perhitungan kembalian dan split payment valid $\sum \text{Payment} = \text{Grand Total}$.
+   - Tes rekonsiliasi kas: Menghitung selisih uang fisik vs sistem secara presisi.
+3. **Security & Authorization Tests**:
+   - Kasir tidak bisa mengakses menu Pengguna, Konfigurasi, atau Laporan Keuangan Toko lain.
+   - Void transaksi setelah struk terbit gagal tanpa PIN Supervisor yang valid.
+   - Diskon manual melebihi 5% gagal tanpa PIN Supervisor.
 
 ---
 
-# 37. Technology Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React |
-| Language | TypeScript |
-| Build Tool | Vite |
-| UI | Material UI |
-| Server State | TanStack Query |
-| Client State | Zustand |
-| HTTP Client | Axios |
-| Form | React Hook Form |
-| Validation | Zod |
-| Charts | Recharts |
-| Backend | Laravel 13 |
-| Backend Language | PHP 8.3+ |
-| API | REST API |
-| Authentication | Laravel Sanctum |
-| Authorization | Policies / Gates / Middleware |
-| ORM | Eloquent |
-| Database | PostgreSQL |
-| Cache | Redis |
-| Queue | Redis |
-| Events | Laravel Events |
-| Background Jobs | Laravel Jobs |
-| Scheduler | Laravel Scheduler |
-| Notifications | Laravel Notifications |
-| Storage | Laravel Filesystem |
-| PDF | DomPDF |
-| Backend Testing | Pest |
-| Frontend Testing | Vitest + React Testing Library |
-| API Documentation | OpenAPI / Swagger |
-| Development | Docker / Laravel Sail |
-| API Testing | Postman / Bruno |
-| Version Control | Git + GitHub |
-
----
-
-# 38. Testing Strategy
-
-## Backend
-
-Prioritaskan business tests:
-
-### Inventory
-- Purchase increases stock.
-- Sale decreases stock.
-- Return increases appropriate stock.
-- Transfer decreases source stock.
-- Transfer receiving increases destination stock.
-- Adjustment changes stock.
-- Stock cannot become negative.
-
-### POS
-- Checkout succeeds with sufficient stock.
-- Checkout fails with insufficient stock.
-- Multiple payment equals total.
-- Discount calculation is correct.
-- Concurrent checkout is safe.
-
-### Purchase
-- PO can be created.
-- Partial receiving works.
-- Remaining quantity is calculated correctly.
-- Receiving updates inventory.
-
-### Return
-- Return cannot exceed eligible quantity.
-- Good return increases sellable stock.
-- Damaged return does not enter sellable stock.
-
-### Authorization
-- Cashier cannot adjust stock.
-- Cashier cannot manage users.
-- Manager cannot manage users.
-- Admin can access administrative features.
-
-## Frontend
-
-Gunakan Vitest + React Testing Library untuk:
-
-- POS cart,
-- discount calculation,
-- payment validation,
-- product search,
-- checkout states,
-- form validation,
-- role-based navigation,
-- loading/error states.
-
----
-
-# 39. Implementation Phases
-
-## Phase 1 — Foundation
-- Project setup
-- Authentication
-- Roles
-- User
-- Store
-- Warehouse
-- Base layout
-- API structure
-
-## Phase 2 — Master Data
-- Product
-- Category
-- Brand
-- Unit
-- Supplier
-- Location
-
-## Phase 3 — Inventory Core
-- Stock balance
-- Stock movement
-- Stock adjustment
-- Low stock
-- Inventory dashboard
-
-## Phase 4 — Purchasing
-- Purchase Order
-- PO items
-- Goods Receipt
-- Partial receiving
-- Purchase return
-
-## Phase 5 — Multi-location
-- Transfer request
-- Transfer approval
-- Shipment
-- In-transit
-- Receiving
-- Transfer history
-
-## Phase 6 — POS
-- Product search
-- Barcode input
-- Cart
-- Discount
-- Multiple payment
-- Checkout
-- Sale
-- Receipt
-
-## Phase 7 — Return
-- Sales return
-- Return items
-- Refund recording
-- Stock handling
-
-## Phase 8 — Stock Opname
-- Opname session
-- Physical count
-- Difference
-- Approval
-- Adjustment
-
-## Phase 9 — Reporting
-- Sales report
-- Inventory report
-- Purchase report
-- Return report
-- Profit report
-- Dashboard analytics
-
-## Phase 10 — Advanced Backend
-- Events
-- Listeners
-- Jobs
-- Queue
-- Redis
-- Scheduler
-- Notifications
-- Cache
-- Audit log
-
-## Phase 11 — Quality
-- Backend tests
-- Frontend tests
-- API documentation
-- Security review
-- Performance review
-- Responsive refinement
-
----
-
-# 40. Success Metrics
-
-### Inventory
-- Stock dapat dilihat per location.
-- Setiap perubahan stock memiliki movement.
-- Stock tidak berubah tanpa reference atau audit trail.
-
-### Purchasing
-- Purchase Order dapat dibuat.
-- Partial receiving dapat dilakukan.
-- Receiving memperbarui inventory.
-
-### POS
-- Cashier dapat menyelesaikan transaksi.
-- Sale otomatis mengurangi stock.
-- Multiple payment dapat dicatat.
-- Receipt dapat dihasilkan.
-
-### Transfer
-- Stock dapat dipindahkan antar location.
-- Source stock berkurang saat shipment.
-- Destination stock bertambah saat receiving.
-
-### Return
-- Return tervalidasi terhadap sale.
-- Stock dikembalikan sesuai kondisi barang.
-- Refund tercatat.
-
-### Security
-- Role restriction bekerja.
-- Unauthorized request ditolak backend.
-
-### Reliability
-- Transaction mencegah partial update.
-- Concurrent stock operation tidak menghasilkan negative stock.
-
----
-
-# 41. Definition of Done
-
-- [ ] Authentication berjalan.
-- [ ] Tiga role berjalan.
-- [ ] Product management berjalan.
-- [ ] Supplier management berjalan.
-- [ ] Multi-store/multi-warehouse berjalan.
-- [ ] Inventory berjalan.
-- [ ] Stock ledger berjalan.
-- [ ] Purchase Order berjalan.
-- [ ] Partial goods receiving berjalan.
-- [ ] Purchase return berjalan.
-- [ ] Stock adjustment berjalan.
-- [ ] Stock opname berjalan.
-- [ ] Stock transfer berjalan.
-- [ ] POS berjalan.
-- [ ] Discount berjalan.
-- [ ] Multiple payment berjalan.
-- [ ] Receipt berjalan.
-- [ ] Sales return berjalan.
-- [ ] Refund recording berjalan.
-- [ ] Low-stock alert berjalan.
-- [ ] Dashboard berjalan.
-- [ ] Reporting berjalan.
-- [ ] Audit log berjalan.
-- [ ] Notification berjalan.
-- [ ] Queue berjalan.
-- [ ] Scheduler berjalan.
-- [ ] Events/listeners berjalan.
-- [ ] Redis cache digunakan secara tepat.
-- [ ] Database transactions diterapkan.
-- [ ] Concurrency handling diterapkan.
-- [ ] Backend authorization diterapkan.
-- [ ] Backend tests tersedia.
-- [ ] Frontend tests tersedia.
-- [ ] API terdokumentasi.
-- [ ] Responsive UI tersedia.
-- [ ] Security review dilakukan.
-
----
-
-# 42. Portfolio Learning Objectives
-
-Setelah menyelesaikan AdaStock, developer diharapkan memahami:
-
-### Laravel Fundamentals
-- Routing
-- Controllers
-- Models
-- Migrations
-- Seeders
-- Factories
-- Form Requests
-- API Resources
-- Validation
-
-### Database
-- Relationships
-- Transactions
-- Indexing
-- Query optimization
-- Locking
-- Data integrity
-
-### Laravel Advanced
-- Sanctum
-- Policies
-- Gates
-- Events
-- Listeners
-- Jobs
-- Queues
-- Scheduler
-- Notifications
-- Cache
-- Storage
-
-### Software Engineering
-- REST API design
-- Business/domain logic
-- Error handling
-- Concurrency
-- Testing
-- API documentation
-- Security
-- Maintainable architecture
-
----
-
-# 43. Final Product Principle
-
-> **Every inventory change must be explainable.**
-
-Setiap perubahan stok harus dapat menjawab:
-
-```text
-What changed?
-How much?
-Where?
-Why?
-Who?
-When?
-Based on which transaction?
-```
-
-Contoh:
-
-```text
-Product:
-Laptop ASUS
-
-Location:
-Central Warehouse
-
-Change:
--5
-
-Reason:
-TRANSFER_OUT
-
-Reference:
-TRF-2026-00012
-
-Actor:
-Manager
-
-Time:
-2026-08-31 10:30
-```
-
-Prinsip ini menjadi fondasi utama desain inventory AdaStock.
-
----
-
-# 44. Final Product Flow
-
-```text
-                         SUPPLIER
-                            │
-                            ▼
-                    PURCHASE ORDER
-                            │
-                            ▼
-                     GOODS RECEIPT
-                            │
-                            ▼
-                       INVENTORY
-                            │
-                            ▼
-                     STOCK LEDGER
-                            │
-              ┌─────────────┴─────────────┐
-              │                           │
-              ▼                           ▼
-        STOCK TRANSFER                  POS
-              │                           │
-              ▼                           ▼
-        OTHER LOCATION                 SALE
-                                          │
-                                          ▼
-                                      PAYMENT
-                                          │
-                                          ▼
-                                   STOCK DECREASE
-                                          │
-                                          ▼
-                                     RECEIPT
-                                          │
-                                          ▼
-                                       RETURN
-                                          │
-                              ┌───────────┴───────────┐
-                              │                       │
-                              ▼                       ▼
-                           GOOD                    DAMAGED
-                              │                       │
-                              ▼                       ▼
-                       SELLABLE STOCK          DAMAGED STOCK
-                              │
-                              ▼
-                         STOCK LEDGER
-                              │
-                              ▼
-                          REPORTING
-```
-
----
-
-# 45. Product Vision
-
-**AdaStock** adalah sistem retail operations yang menghubungkan **purchasing, inventory, multi-location, POS, return, dan reporting** dalam satu alur data yang konsisten.
-
-Nilai utama:
-
-> **Accurate Stock. Traceable Movement. Integrated Sales. Controlled Operations.**
-
----
-
-## Document Status
-
-This PRD is the baseline for product design and implementation.
-
-Business rules dapat disempurnakan selama database design, API design, UX design, dan implementation, tetapi perubahan harus tetap konsisten dengan product goals dan core inventory principles dalam dokumen ini.
+## 11. Roadmap Implementasi Bertahap
+
+- **Tahap 1: Setup Fondasi & Otentikasi**: Laravel 13, Migrasi Database, Role & Permission, Manajemen Pengguna, PIN Supervisor, Layout Blade responsif.
+- **Tahap 2: Master Data & Multi-Satuan**: CRUD Produk, Kategori, Brand, Supplier, Lokasi (Toko, Gudang, Karantina), Konversi Satuan (`product_units`).
+- **Tahap 3: Engine Buku Besar Stok & HPP**: Service Mutasi Stok, Perhitungan Moving Average HPP, Stock Adjustment, dan Karantina Barang Rusak.
+- **Tahap 4: Pengadaan & Transfer**: Purchase Order, Penerimaan Bertahap (*Partial Goods Receipt*), Transfer Stok *In-Transit*, dan Retur Supplier (*RTV*).
+- **Tahap 5: Manajemen Shift & Cash Drawer**: Buka Kasir (*Opening Float*), Kas Masuk/Keluar, Tutup Kasir, dan Rekonsiliasi Selisih Fisik.
+- **Tahap 6: POS Interaktif & Checkout**: Blade + Alpine.js POS Screen, Multi-satuan, Hotkey, Scanner Autocomplete, Split Payment, Cetak Struk PDF/Thermal.
+- **Tahap 7: Otorisasi Khusus & Retur Penjualan**: Modal Input PIN Supervisor (Void & Diskon Khusus), Retur Penjualan dengan pemisahan barang Baik vs Rusak.
+- **Tahap 8: Stock Opname & Penyesuaian**: Sesi opname, input fisik, kalkulasi selisih, approval, dan mutasi koreksi otomatis.
+- **Tahap 9: Laporan & Dashboard Analitik**: Laporan Laba Kotor, Perputaran Stok, Rekonsiliasi Kasir, dan Audit Log.
+- **Tahap 10: Optimasi, Testing Pest PHP & Polishing**: End-to-end testing, optimasi query, caching Redis, dan penyempurnaan UX.
