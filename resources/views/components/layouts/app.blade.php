@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ $title ?? 'Dashboard' }} — {{ config('app.name', 'AdaStock POS') }}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="h-full antialiased font-sans text-slate-800 bg-slate-50" x-data="{ sidebarOpen: false }">
+    <div class="min-h-full flex flex-col lg:flex-row">
+        
+        <!-- Mobile Sidebar Backdrop -->
+        <div x-show="sidebarOpen" 
+             x-transition:enter="transition-opacity ease-linear duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-linear duration-300"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden" 
+             @click="sidebarOpen = false"></div>
+
+        <!-- Sidebar Navigation -->
+        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" 
+               class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0">
+            
+            <!-- Sidebar Header / Brand -->
+            <div class="h-20 flex items-center justify-between px-6 border-b border-slate-800/80 bg-slate-950/40">
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 shadow-md shadow-indigo-600/30 flex items-center justify-center text-white font-extrabold text-lg">
+                        AS
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold tracking-tight text-white">Ada<span class="text-indigo-400">Stock</span></span>
+                        <span class="block text-[10px] uppercase font-bold tracking-widest text-slate-400">Retail & POS</span>
+                    </div>
+                </a>
+                <button @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-white p-1">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Current Store / Context Pill -->
+            <div class="p-4 mx-4 mt-4 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lokasi Aktif</span>
+                </div>
+                <div class="mt-1 text-sm font-bold text-white truncate">
+                    {{ auth()->user()->assignedStore->name ?? 'Semua Lokasi (Pusat)' }}
+                </div>
+                <div class="text-[11px] text-slate-400 mt-0.5">
+                    {{ auth()->user()->assignedStore->code ?? 'KONSOLIDASI' }}
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+                
+                <!-- General Section -->
+                <div class="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Menu Utama
+                </div>
+
+                <a href="{{ route('dashboard') }}" 
+                   class="{{ request()->routeIs('dashboard') ? 'bg-indigo-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                    <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                    </svg>
+                    Dashboard
+                </a>
+
+                <!-- POS Section (Cashier, Manager, Admin) -->
+                <a href="{{ route('pos.index') }}" 
+                   class="{{ request()->routeIs('pos.*') ? 'bg-emerald-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                    </svg>
+                    Kasir (POS)
+                </a>
+
+                <a href="{{ route('shifts.index') }}" 
+                   class="{{ request()->routeIs('shifts.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                    <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Shift Kasir
+                </a>
+
+                <!-- Inventory & Operations (Admin & Manager) -->
+                @if(auth()->user()->isAdmin() || auth()->user()->isManager())
+                    <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        Manajemen Operasional
+                    </div>
+
+                    <a href="{{ route('locations.index') }}" 
+                       class="{{ request()->routeIs('locations.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                        </svg>
+                        Toko & Gudang
+                    </a>
+                @endif
+
+                <!-- Administration (Admin Only) -->
+                @if(auth()->user()->isAdmin())
+                    <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        Administrasi Sistem
+                    </div>
+
+                    <a href="{{ route('admin.users.index') }}" 
+                       class="{{ request()->routeIs('admin.users.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                        </svg>
+                        Kelola Pengguna
+                    </a>
+                @endif
+            </nav>
+
+            <!-- User Footer in Sidebar -->
+            <div class="p-4 border-t border-slate-800/80 bg-slate-950/40">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-sm font-bold text-white">
+                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-white truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-xs text-slate-400 capitalize">{{ auth()->user()->role->label() }}</p>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" title="Keluar" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            
+            <!-- Top Navbar -->
+            <header class="h-20 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 lg:px-8">
+                <div class="flex items-center gap-4">
+                    <button @click="sidebarOpen = true" class="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-900 tracking-tight">{{ $header ?? $title ?? 'Dashboard' }}</h1>
+                        @if(isset($subtitle))
+                            <p class="text-xs text-slate-500 mt-0.5">{{ $subtitle }}</p>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <x-badge variant="indigo" size="md">
+                        {{ auth()->user()->role->label() }}
+                    </x-badge>
+
+                    @if(auth()->user()->assignedStore)
+                        <x-badge variant="emerald" size="md">
+                            {{ auth()->user()->assignedStore->name }}
+                        </x-badge>
+                    @endif
+                </div>
+            </header>
+
+            <!-- Page Body -->
+            <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+                <!-- Flash Alerts -->
+                @if(session('success'))
+                    <x-alert type="success">{{ session('success') }}</x-alert>
+                @endif
+                @if(session('error'))
+                    <x-alert type="error">{{ session('error') }}</x-alert>
+                @endif
+                @if(session('warning'))
+                    <x-alert type="warning">{{ session('warning') }}</x-alert>
+                @endif
+                @if(session('info'))
+                    <x-alert type="info">{{ session('info') }}</x-alert>
+                @endif
+
+                {{ $slot }}
+            </main>
+        </div>
+    </div>
+</body>
+</html>
