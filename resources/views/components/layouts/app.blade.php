@@ -79,6 +79,15 @@
                     Dashboard
                 </a>
 
+                <!-- Products Catalog (Accessible by all roles) -->
+                <a href="{{ route('products.index') }}" 
+                   class="{{ request()->routeIs('products.*') ? 'bg-indigo-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                    <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                    </svg>
+                    Katalog Produk
+                </a>
+
                 <!-- POS Section (Cashier, Manager, Admin) -->
                 <a href="{{ route('pos.index') }}" 
                    class="{{ request()->routeIs('pos.*') ? 'bg-emerald-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
@@ -101,6 +110,31 @@
                     <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         Manajemen Operasional
                     </div>
+
+                    <a href="{{ route('categories.index') }}" 
+                       class="{{ request()->routeIs('categories.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                        </svg>
+                        Kategori
+                    </a>
+
+                    <a href="{{ route('brands.index') }}" 
+                       class="{{ request()->routeIs('brands.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253" />
+                        </svg>
+                        Merek / Brand
+                    </a>
+
+                    <a href="{{ route('suppliers.index') }}" 
+                       class="{{ request()->routeIs('suppliers.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25h1.125c.621 0 1.125.504 1.125 1.125v3.75m-6.75-4.875H6a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25h1.5" />
+                        </svg>
+                        Pemasok / Supplier
+                    </a>
 
                     <a href="{{ route('locations.index') }}" 
                        class="{{ request()->routeIs('locations.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
