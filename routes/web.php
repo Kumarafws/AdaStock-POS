@@ -4,7 +4,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,11 +46,21 @@ Route::middleware('auth')->group(function () {
             $locations = \App\Models\Location::withCount('users')->get();
             return view('locations.index', compact('locations'));
         })->name('locations.index');
+
+        // Stock Ledger & Adjustments (Admin & Manager)
+        Route::get('/inventory/ledger', [InventoryController::class, 'ledger'])->name('inventory.ledger');
+        Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');
+        Route::get('/adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
+        Route::post('/adjustments', [StockAdjustmentController::class, 'store'])->name('adjustments.store');
     });
 
-    // Product Read Routes (All authenticated roles: Cashier, Manager, Admin)
+    // Product & Inventory Read Routes (All authenticated roles: Cashier, Manager, Admin)
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show')->whereNumber('product');
+
+    // Real-time Stock Monitoring (Scoped for Cashier)
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('/inventory/check-stock', [InventoryController::class, 'checkStock'])->name('inventory.check-stock');
 
     // Admin-Only Routes
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {

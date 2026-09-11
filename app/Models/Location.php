@@ -33,6 +33,16 @@ class Location extends Model
         return $this->hasMany(User::class, 'assigned_store_id');
     }
 
+    public function inventories(): HasMany
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
     public function scopeStores($query)
     {
         return $query->where('type', LocationType::STORE);

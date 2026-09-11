@@ -246,5 +246,112 @@ class DatabaseSeeder extends Seeder
             'barcode' => '899600130112',
             'selling_price' => 132000,
         ]);
+
+        // 7. Seed Initial Inventory Balances & Movements via InventoryService
+        /** @var \App\Services\InventoryService $inventoryService */
+        $inventoryService = app(\App\Services\InventoryService::class);
+        $adminUser = User::where('role', UserRole::ADMIN)->first();
+
+        // Stock in Warehouse (WHS-01)
+        $inventoryService->recordMovement(
+            product: $p1,
+            location: $warehouse,
+            quantityInBaseUnit: 800, // 20 Dus
+            type: \App\Enums\MovementType::PURCHASE_RECEIPT,
+            refType: 'GoodsReceipt',
+            refNumber: 'GR/20260901/0001',
+            notes: 'Penerimaan Stok Awal Gudang Pusat dari Supplier PT Indomarco Adi Prima',
+            actor: $adminUser
+        );
+
+        $inventoryService->recordMovement(
+            product: $p2,
+            location: $warehouse,
+            quantityInBaseUnit: 240, // 10 Karton
+            type: \App\Enums\MovementType::PURCHASE_RECEIPT,
+            refType: 'GoodsReceipt',
+            refNumber: 'GR/20260901/0002',
+            notes: 'Penerimaan Stok Awal Gudang Pusat dari Supplier PT Ultra Jaya',
+            actor: $adminUser
+        );
+
+        $inventoryService->recordMovement(
+            product: $p3,
+            location: $warehouse,
+            quantityInBaseUnit: 200, // 50 Pak
+            type: \App\Enums\MovementType::PURCHASE_RECEIPT,
+            refType: 'GoodsReceipt',
+            refNumber: 'GR/20260901/0003',
+            notes: 'Penerimaan Stok Awal Gudang Pusat dari PT Unilever',
+            actor: $adminUser
+        );
+
+        $inventoryService->recordMovement(
+            product: $p4,
+            location: $warehouse,
+            quantityInBaseUnit: 120, // 10 Dus
+            type: \App\Enums\MovementType::PURCHASE_RECEIPT,
+            refType: 'GoodsReceipt',
+            refNumber: 'GR/20260901/0004',
+            notes: 'Penerimaan Stok Awal Gudang Pusat dari Mayora',
+            actor: $adminUser
+        );
+
+        // Stock in Store (STR-01)
+        $inventoryService->recordMovement(
+            product: $p1,
+            location: $store,
+            quantityInBaseUnit: 120, // 3 Dus
+            type: \App\Enums\MovementType::TRANSFER_IN,
+            refType: 'StockTransfer',
+            refNumber: 'TRF/20260905/0001',
+            notes: 'Transfer Alokasi Display Toko Cabang Utama',
+            actor: $adminUser
+        );
+
+        $inventoryService->recordMovement(
+            product: $p2,
+            location: $store,
+            quantityInBaseUnit: 48, // 2 Karton
+            type: \App\Enums\MovementType::TRANSFER_IN,
+            refType: 'StockTransfer',
+            refNumber: 'TRF/20260905/0002',
+            notes: 'Transfer Alokasi Chiller Toko Cabang Utama',
+            actor: $adminUser
+        );
+
+        $inventoryService->recordMovement(
+            product: $p3,
+            location: $store,
+            quantityInBaseUnit: 32, // 8 Pak
+            type: \App\Enums\MovementType::TRANSFER_IN,
+            refType: 'StockTransfer',
+            refNumber: 'TRF/20260905/0003',
+            notes: 'Transfer Alokasi Rak Toiletries Toko',
+            actor: $adminUser
+        );
+
+        $inventoryService->recordMovement(
+            product: $p4,
+            location: $store,
+            quantityInBaseUnit: 24, // 2 Dus
+            type: \App\Enums\MovementType::TRANSFER_IN,
+            refType: 'StockTransfer',
+            refNumber: 'TRF/20260905/0004',
+            notes: 'Transfer Alokasi Rak Biskuit Toko',
+            actor: $adminUser
+        );
+
+        // Damaged item in Quarantine (QRN-01)
+        $inventoryService->recordMovement(
+            product: $p1,
+            location: $quarantine,
+            quantityInBaseUnit: 5,
+            type: \App\Enums\MovementType::TRANSFER_IN,
+            refType: \App\Models\StockAdjustment::class,
+            refNumber: 'ADJ/20260910/0001',
+            notes: 'Penerimaan Karantina barang rusak dari Toko Cabang Utama (kemasan sobek)',
+            actor: $adminUser
+        );
     }
 }
