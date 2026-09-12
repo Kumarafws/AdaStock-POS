@@ -9,8 +9,10 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Middleware\EnsureActiveShift;
 use Illuminate\Support\Facades\Route;
 
 // Redirect root to dashboard or login
@@ -96,12 +98,17 @@ Route::middleware('auth')->group(function () {
 
     // Cashier Routes (POS & Shift)
     Route::middleware('role:cashier,admin,manager')->group(function () {
+        // POS Screen - Protected by EnsureActiveShift
         Route::get('/pos', function () {
             return view('pos.index');
-        })->name('pos.index');
+        })->middleware(EnsureActiveShift::class)->name('pos.index');
 
-        Route::get('/shifts', function () {
-            return view('shifts.index');
-        })->name('shifts.index');
+        // Cashier Shift Register Management
+        Route::get('/shifts', [ShiftController::class, 'index'])->name('shifts.index');
+        Route::get('/shifts/create', [ShiftController::class, 'create'])->name('shifts.create');
+        Route::post('/shifts', [ShiftController::class, 'store'])->name('shifts.store');
+        Route::get('/shifts/{shift}', [ShiftController::class, 'show'])->name('shifts.show');
+        Route::get('/shifts/{shift}/close', [ShiftController::class, 'closeForm'])->name('shifts.close.form');
+        Route::post('/shifts/{shift}/close', [ShiftController::class, 'close'])->name('shifts.close');
     });
 });
