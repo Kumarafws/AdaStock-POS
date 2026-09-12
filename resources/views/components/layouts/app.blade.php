@@ -138,6 +138,34 @@
                     </a>
 
                     <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        Pengadaan & Pembelian
+                    </div>
+
+                    <a href="{{ route('purchasing.orders.index') }}" 
+                       class="{{ request()->routeIs('purchasing.orders.*') ? 'bg-indigo-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                        Pesanan Pembelian (PO)
+                    </a>
+
+                    <a href="{{ route('purchasing.receipts.index') }}" 
+                       class="{{ request()->routeIs('purchasing.receipts.*') ? 'bg-indigo-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25h1.125c.621 0 1.125.504 1.125 1.125v3.75m-6.75-4.875H6a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25h1.5" />
+                        </svg>
+                        Penerimaan Barang (GR)
+                    </a>
+
+                    <a href="{{ route('purchasing.returns.index') }}" 
+                       class="{{ request()->routeIs('purchasing.returns.*') ? 'bg-indigo-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15m0 0l6.75 6.75M4.5 12l6.75-6.75" />
+                        </svg>
+                        Retur Supplier
+                    </a>
+
+                    <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         Manajemen Master
                     </div>
 

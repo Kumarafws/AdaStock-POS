@@ -4,8 +4,11 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +55,28 @@ Route::middleware('auth')->group(function () {
         Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');
         Route::get('/adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
         Route::post('/adjustments', [StockAdjustmentController::class, 'store'])->name('adjustments.store');
+
+        // Purchasing & Procurement (Admin & Manager)
+        Route::prefix('purchasing')->name('purchasing.')->group(function () {
+            // Purchase Orders
+            Route::get('/orders', [PurchaseOrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/create', [PurchaseOrderController::class, 'create'])->name('orders.create');
+            Route::post('/orders', [PurchaseOrderController::class, 'store'])->name('orders.store');
+            Route::get('/orders/{order}', [PurchaseOrderController::class, 'show'])->name('orders.show');
+            Route::post('/orders/{order}/cancel', [PurchaseOrderController::class, 'cancel'])->name('orders.cancel');
+
+            // Goods Receipts (Penerimaan Barang)
+            Route::get('/receipts', [GoodsReceiptController::class, 'index'])->name('receipts.index');
+            Route::get('/receipts/create', [GoodsReceiptController::class, 'create'])->name('receipts.create');
+            Route::post('/receipts', [GoodsReceiptController::class, 'store'])->name('receipts.store');
+            Route::get('/receipts/{receipt}', [GoodsReceiptController::class, 'show'])->name('receipts.show');
+
+            // Purchase Returns (Retur Supplier)
+            Route::get('/returns', [PurchaseReturnController::class, 'index'])->name('returns.index');
+            Route::get('/returns/create', [PurchaseReturnController::class, 'create'])->name('returns.create');
+            Route::post('/returns', [PurchaseReturnController::class, 'store'])->name('returns.store');
+            Route::get('/returns/{return}', [PurchaseReturnController::class, 'show'])->name('returns.show');
+        });
     });
 
     // Product & Inventory Read Routes (All authenticated roles: Cashier, Manager, Admin)
