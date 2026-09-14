@@ -276,6 +276,14 @@
                             </div>
                         </div>
 
+                        <!-- Supervisor Discount Warning -->
+                        <div x-show="isDiscountOverThreshold" class="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold">
+                            <svg class="w-3.5 h-3.5 shrink-0 text-purple-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285zM12 17.25h.008v.008H12v-.008z" />
+                            </svg>
+                            <span>Diskon &gt; 5% / Rp 20rb: Perlu PIN Supervisor</span>
+                        </div>
+
                         <!-- Grand Total Display -->
                         <div class="flex justify-between items-center pt-2 border-t border-slate-200">
                             <span class="text-sm font-extrabold uppercase tracking-wide text-slate-900">Total Tagihan:</span>
@@ -359,6 +367,25 @@
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">Catatan Struk:</label>
                             <input type="text" x-model="orderNotes" placeholder="Opsional.." class="w-full text-xs rounded-xl border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Supervisor Authorization Card for High Discount -->
+                    <div x-show="isDiscountOverThreshold" class="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-purple-900">
+                            <svg class="w-4 h-4 text-purple-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                            </svg>
+                            <span>Otorisasi Diskon Khusus Supervisor Dibutuhkan</span>
+                        </div>
+                        <p class="text-[11px] text-purple-700">
+                            Diskon manual sebesar Rp <span x-text="Number(transactionDiscount).toLocaleString('id-ID')"></span> melebihi batas wajar kasir. Masukkan PIN Supervisor untuk melanjutkan.
+                        </p>
+                        <div>
+                            <input type="password" 
+                                   x-model="supervisorPin" 
+                                   placeholder="PIN Supervisor (6 digit)..." 
+                                   class="w-full text-center text-sm font-black tracking-widest rounded-xl border-purple-300 py-2 focus:border-purple-500 focus:ring-purple-500 bg-white">
                         </div>
                     </div>
 
@@ -566,7 +593,15 @@
                 isHoldModalOpen: false,
                 holdReference: '',
                 isCheckingOut: false,
+                supervisorPin: '',
                 payments: [{ payment_method: 'cash', amount: 0, reference_number: '' }],
+
+                get isDiscountOverThreshold() {
+                    const disc = parseFloat(this.transactionDiscount) || 0;
+                    if (disc <= 0) return false;
+                    const maxAllowed = Math.min(this.cartSubtotal * 0.05, 20000);
+                    return disc > maxAllowed;
+                },
 
                 get filteredProducts() {
                     let list = this.products;
@@ -722,6 +757,11 @@
 
                 quickPayExact() {
                     if (this.cart.length === 0 || this.isCheckingOut) return;
+                    if (this.isDiscountOverThreshold && !this.supervisorPin) {
+                        this.openPaymentModal();
+                        alert('Diskon manual melebihi batas wajar kasir. Otorisasi PIN Supervisor diperlukan.');
+                        return;
+                    }
                     this.payments = [{ payment_method: 'cash', amount: this.cartGrandTotal, reference_number: '' }];
                     this.processCheckout();
                 },
@@ -757,6 +797,12 @@
 
                 async processCheckout() {
                     if (this.cart.length === 0 || this.totalPaid < this.cartGrandTotal) return;
+
+                    if (this.isDiscountOverThreshold && !this.supervisorPin) {
+                        alert('Diskon manual melebihi batas wajar kasir. Silakan masukkan PIN Supervisor pada form pembayaran.');
+                        return;
+                    }
+
                     this.isCheckingOut = true;
 
                     const payload = {
@@ -773,6 +819,7 @@
                         })),
                         customer_name: this.customerName || 'Pelanggan Umum',
                         discount_amount: this.transactionDiscount || 0,
+                        supervisor_pin: this.supervisorPin || null,
                         notes: this.orderNotes || null
                     };
 

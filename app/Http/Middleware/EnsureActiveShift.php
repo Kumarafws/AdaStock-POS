@@ -24,6 +24,10 @@ class EnsureActiveShift
             $activeShift = $this->shiftService->getActiveShift($user);
 
             if (!$activeShift) {
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Silakan buka register shift kasir terlebih dahulu.'], 403);
+                }
+
                 return redirect()
                     ->route('shifts.create')
                     ->with('warning', 'Silakan buka register shift kasir terlebih dahulu sebelum mengakses layar POS.');

@@ -6,9 +6,13 @@ use App\Enums\PaymentMethod;
 use App\Exceptions\InsufficientStockException;
 use App\Http\Requests\HoldCartRequest;
 use App\Http\Requests\PosCheckoutRequest;
+use App\Http\Requests\VerifyPinRequest;
+use App\Http\Requests\VoidSaleRequest;
 use App\Models\Category;
 use App\Models\HeldCart;
 use App\Models\Sale;
+use App\Models\SaleVoidLog;
+use App\Services\AuthorizationService;
 use App\Services\PosService;
 use App\Services\ShiftService;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +25,8 @@ class PosController extends Controller
 {
     public function __construct(
         protected PosService $posService,
-        protected ShiftService $shiftService
+        protected ShiftService $shiftService,
+        protected AuthorizationService $authorizationService
     ) {}
 
     /**
@@ -152,6 +157,18 @@ class PosController extends Controller
             return redirect()->route('shifts.create')->with('error', 'Buka shift terlebih dahulu.');
         }
 
+        $discountSupervisor = null;
+        if ($request->filled('supervisor_pin')) {
+            try {
+                $discountSupervisor = $this->authorizationService->verifySupervisorPin($request->input('supervisor_pin'));
+            } catch (InvalidArgumentException $e) {
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => $e->getMessage()], 422);
+                }
+                return redirect()->back()->withInput()->with('error', $e->getMessage());
+            }
+        }
+
         try {
             $sale = $this->posService->checkout(
                 shift: $activeShift,
@@ -160,7 +177,8 @@ class PosController extends Controller
                 payments: $request->input('payments'),
                 customerName: $request->input('customer_name', 'Pelanggan Umum'),
                 discountAmount: (float) $request->input('discount_amount', 0),
-                notes: $request->input('notes')
+                notes: $request->input('notes'),
+                discountAuthorizedBy: $discountSupervisor
             );
 
             if ($request->wantsJson()) {
@@ -264,5 +282,102 @@ class PosController extends Controller
         }
 
         return redirect()->route('pos.index')->with('success', "Keranjang '{$data['reference']}' berhasil dimuat kembali.");
+    }
+
+    /**
+     * Verify supervisor PIN via API.
+     */
+    public function verifyPin(VerifyPinRequest $request): JsonResponse
+    {
+        try {
+            $supervisor = $this->authorizationService->verifySupervisorPin($request->input('pin'));
+
+            return response()->json([
+                'success' => true,
+                'message' => "Otorisasi berhasil oleh {$supervisor->name} ({$supervisor->role->label()}).",
+                'supervisor' => [
+                    'id' => $supervisor->id,
+                    'name' => $supervisor->name,
+                    'role' => $supervisor->role->value,
+                ],
+            ]);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Void a completed sale with supervisor authorization.
+     */
+    public function voidSale(VoidSaleRequest $request, Sale $sale): JsonResponse|RedirectResponse
+    {
+        $user = $request->user();
+
+        try {
+            // 1. Verify Supervisor PIN
+            $supervisor = $this->authorizationService->verifySupervisorPin($request->input('pin'));
+
+            // 2. Execute Void via PosService
+            $voidedSale = $this->posService->voidSale(
+                sale: $sale,
+                cashier: $user,
+                supervisor: $supervisor,
+                reason: $request->input('reason'),
+                notes: $request->input('notes')
+            );
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Transaksi {$voidedSale->sale_number} berhasil dibatalkan (VOID).",
+                    'sale_id' => $voidedSale->id,
+                    'sale_number' => $voidedSale->sale_number,
+                    'redirect_url' => route('pos.receipt', $voidedSale),
+                ]);
+            }
+
+            return redirect()
+                ->route('pos.receipt', $voidedSale)
+                ->with('success', "Transaksi {$voidedSale->sale_number} berhasil dibatalkan (VOID).");
+        } catch (InvalidArgumentException $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Display void audit logs (Admin & Manager).
+     */
+    public function voidLogs(Request $request): View
+    {
+        $query = SaleVoidLog::with(['sale.location', 'cashier', 'supervisor']);
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('voided_at', '>=', $request->query('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('voided_at', '<=', $request->query('date_to'));
+        }
+        if ($request->filled('search')) {
+            $s = trim($request->query('search'));
+            $query->whereHas('sale', function ($q) use ($s) {
+                $q->where('sale_number', 'like', "%{$s}%");
+            });
+        }
+
+        $logs = $query->latest('voided_at')->paginate(15)->withQueryString();
+
+        return view('pos.void_logs', [
+            'logs' => $logs,
+        ]);
     }
 }

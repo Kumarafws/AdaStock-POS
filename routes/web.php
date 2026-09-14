@@ -80,6 +80,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/returns', [PurchaseReturnController::class, 'store'])->name('returns.store');
             Route::get('/returns/{return}', [PurchaseReturnController::class, 'show'])->name('returns.show');
         });
+
+        // Void Audit Logs (Admin & Manager)
+        Route::get('/pos/void-logs', [PosController::class, 'voidLogs'])->name('pos.void-logs');
     });
 
     // Product & Inventory Read Routes (All authenticated roles: Cashier, Manager, Admin)
@@ -107,6 +110,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/pos/receipt/{sale}', [PosController::class, 'receipt'])->name('pos.receipt');
             Route::post('/pos/hold', [PosController::class, 'hold'])->name('pos.hold');
             Route::post('/pos/recall/{heldCart}', [PosController::class, 'recall'])->name('pos.recall');
+            Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->name('pos.verify-pin');
+            Route::post('/pos/sales/{sale}/void', [PosController::class, 'voidSale'])->name('pos.void');
         });
 
         // Cashier Shift Register Management

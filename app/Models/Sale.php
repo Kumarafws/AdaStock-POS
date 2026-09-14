@@ -22,6 +22,7 @@ class Sale extends Model
         'transaction_date',
         'subtotal',
         'discount_amount',
+        'discount_authorized_by',
         'tax_amount',
         'rounding_amount',
         'total_amount',
@@ -65,6 +66,11 @@ class Sale extends Model
         return $this->belongsTo(Location::class, 'location_id');
     }
 
+    public function discountAuthorizer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'discount_authorized_by');
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(SaleItem::class);
@@ -73,6 +79,11 @@ class Sale extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(SalePayment::class);
+    }
+
+    public function voidLog(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SaleVoidLog::class);
     }
 
     public function isCompleted(): bool

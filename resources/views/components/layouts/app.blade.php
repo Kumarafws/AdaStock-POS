@@ -115,6 +115,16 @@
                     Shift Kasir
                 </a>
 
+                @if(auth()->user()->isAdmin() || auth()->user()->isManager())
+                    <a href="{{ route('pos.void-logs') }}" 
+                       class="{{ request()->routeIs('pos.void-logs') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                        <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                        Log Transaksi Void
+                    </a>
+                @endif
+
                 <!-- Inventory & Operations (Admin & Manager) -->
                 @if(auth()->user()->isAdmin() || auth()->user()->isManager())
                     <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">

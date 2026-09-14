@@ -27,6 +27,7 @@ class PosCheckoutRequest extends FormRequest
             'payments.*.reference_number' => ['nullable', 'string', 'max:100'],
             'customer_name' => ['nullable', 'string', 'max:100'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'supervisor_pin' => ['nullable', 'string'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }

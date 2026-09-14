@@ -14,6 +14,7 @@ use App\Models\ProductUnit;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SalePayment;
+use App\Models\SaleVoidLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,8 @@ use InvalidArgumentException;
 class PosService
 {
     public function __construct(
-        protected InventoryService $inventoryService
+        protected InventoryService $inventoryService,
+        protected AuthorizationService $authorizationService
     ) {}
 
     /**
@@ -38,7 +40,8 @@ class PosService
         array $payments,
         ?string $customerName = 'Pelanggan Umum',
         float $discountAmount = 0,
-        ?string $notes = null
+        ?string $notes = null,
+        ?User $discountAuthorizedBy = null
     ): Sale {
         if (!$shift->isOpen()) {
             throw new InvalidArgumentException("Shift kasir ({$shift->shift_number}) telah ditutup. Tidak dapat memproses transaksi.");
@@ -59,7 +62,8 @@ class PosService
             $payments,
             $customerName,
             $discountAmount,
-            $notes
+            $notes,
+            $discountAuthorizedBy
         ) {
             $location = $shift->location;
 
@@ -122,6 +126,13 @@ class PosService
             $totalAmount = max(0.0, $subtotal - $transactionDiscount);
             $totalProfit = $totalAmount - $totalCogs;
 
+            // Check discount authorization threshold
+            if ($transactionDiscount > 0 && $this->authorizationService->isDiscountOverThreshold($subtotal, $transactionDiscount)) {
+                if (!$discountAuthorizedBy) {
+                    throw new InvalidArgumentException('Diskon manual melebihi batas kewenangan kasir (maks 5% atau Rp 20.000). Otorisasi PIN Supervisor diperlukan.');
+                }
+            }
+
             // 3. Payment calculations & validation
             $totalPaid = 0.0;
             $cashPaid = 0.0;
@@ -177,6 +188,7 @@ class PosService
                 'transaction_date' => now(),
                 'subtotal' => $subtotal,
                 'discount_amount' => $transactionDiscount,
+                'discount_authorized_by' => $discountAuthorizedBy?->id,
                 'tax_amount' => 0,
                 'rounding_amount' => 0,
                 'total_amount' => $totalAmount,
@@ -343,5 +355,83 @@ class PosService
         $nextSeq = str_pad((string) ($lastSeq + 1), 4, '0', STR_PAD_LEFT);
 
         return $prefix . $nextSeq;
+    }
+
+    /**
+     * Cancel / void a completed sale with supervisor authorization.
+     *
+     * @throws InvalidArgumentException
+     */
+    public function voidSale(
+        Sale $sale,
+        User $cashier,
+        User $supervisor,
+        string $reason,
+        ?string $notes = null
+    ): Sale {
+        if ($sale->isVoided()) {
+            throw new InvalidArgumentException("Transaksi {$sale->sale_number} sudah dibatalkan sebelumnya.");
+        }
+
+        if (!$sale->isCompleted()) {
+            throw new InvalidArgumentException('Hanya transaksi dengan status Selesai yang dapat dibatalkan.');
+        }
+
+        $shift = $sale->shift;
+        if (!$shift->isOpen()) {
+            throw new InvalidArgumentException("Transaksi {$sale->sale_number} tidak dapat dibatalkan karena shift kasir sudah ditutup.");
+        }
+
+        $cleanReason = trim($reason);
+        if (empty($cleanReason)) {
+            throw new InvalidArgumentException('Alasan pembatalan transaksi (void) wajib dicantumkan.');
+        }
+
+        return DB::transaction(function () use ($sale, $cashier, $supervisor, $cleanReason, $notes, $shift) {
+            $location = $sale->location;
+
+            // 1. Revert inventory stock for all items
+            foreach ($sale->items as $item) {
+                $this->inventoryService->recordMovement(
+                    product: $item->product,
+                    location: $location,
+                    quantityInBaseUnit: $item->quantity_base, // Positive quantity adds stock back
+                    type: MovementType::SALE_VOID,
+                    refType: Sale::class,
+                    refId: $sale->id,
+                    refNumber: $sale->sale_number,
+                    notes: "Pembatalan (Void) Penjualan - {$sale->sale_number} ({$item->quantity} {$item->unit_name}). Alasan: {$cleanReason}",
+                    actor: $cashier
+                );
+            }
+
+            // 2. Adjust cashier shift totals
+            $cashPaidInSale = (float) $sale->payments()->where('payment_method', PaymentMethod::CASH->value)->sum('amount');
+            $netCashFromSale = max(0.0, $cashPaidInSale - (float) $sale->change_amount);
+            $nonCashFromSale = (float) $sale->payments()->where('payment_method', '!=', PaymentMethod::CASH->value)->sum('amount');
+
+            $shift->total_sales_amount = max(0.0, (float) $shift->total_sales_amount - (float) $sale->total_amount);
+            $shift->total_sales_cash = max(0.0, (float) $shift->total_sales_cash - $netCashFromSale);
+            $shift->total_sales_non_cash = max(0.0, (float) $shift->total_sales_non_cash - $nonCashFromSale);
+            $shift->total_transactions_count = max(0, (int) $shift->total_transactions_count - 1);
+            $shift->save();
+
+            // 3. Mark sale as VOIDED
+            $sale->status = SaleStatus::VOIDED;
+            $sale->notes = trim(($sale->notes ?? '') . "\n[DIBATALKAN (VOID) oleh {$cashier->name}, disetujui Supervisor: {$supervisor->name}. Alasan: {$cleanReason}]");
+            $sale->save();
+
+            // 4. Create Audit Log
+            SaleVoidLog::create([
+                'sale_id' => $sale->id,
+                'cashier_id' => $cashier->id,
+                'supervisor_id' => $supervisor->id,
+                'reason' => $cleanReason,
+                'notes' => $notes,
+                'voided_at' => now(),
+            ]);
+
+            return $sale->fresh(['items.product', 'payments', 'voidLog.supervisor', 'location', 'cashier']);
+        });
     }
 }
