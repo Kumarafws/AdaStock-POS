@@ -63,6 +63,16 @@ class CashierShift extends Model
         return $this->belongsTo(User::class, 'closed_by');
     }
 
+    public function sales(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Sale::class);
+    }
+
+    public function heldCarts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HeldCart::class);
+    }
+
     public function scopeOpen($query)
     {
         return $query->where('status', ShiftStatus::OPEN);

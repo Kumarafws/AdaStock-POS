@@ -98,6 +98,16 @@ class Product extends Model
         });
     }
 
+    public function getBaseUnitAttribute(): string
+    {
+        return $this->base_unit_name ?? 'Pcs';
+    }
+
+    public function getSellingPriceAttribute(): float
+    {
+        return (float) ($this->default_selling_price ?? 0);
+    }
+
     public function scopeCategory($query, $categoryId)
     {
         if ($categoryId) {

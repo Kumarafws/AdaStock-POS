@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseReturnController;
@@ -98,10 +99,15 @@ Route::middleware('auth')->group(function () {
 
     // Cashier Routes (POS & Shift)
     Route::middleware('role:cashier,admin,manager')->group(function () {
-        // POS Screen - Protected by EnsureActiveShift
-        Route::get('/pos', function () {
-            return view('pos.index');
-        })->middleware(EnsureActiveShift::class)->name('pos.index');
+        // POS Screen & Operations - Protected by EnsureActiveShift
+        Route::middleware(EnsureActiveShift::class)->group(function () {
+            Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
+            Route::get('/pos/search', [PosController::class, 'search'])->name('pos.search');
+            Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
+            Route::get('/pos/receipt/{sale}', [PosController::class, 'receipt'])->name('pos.receipt');
+            Route::post('/pos/hold', [PosController::class, 'hold'])->name('pos.hold');
+            Route::post('/pos/recall/{heldCart}', [PosController::class, 'recall'])->name('pos.recall');
+        });
 
         // Cashier Shift Register Management
         Route::get('/shifts', [ShiftController::class, 'index'])->name('shifts.index');
