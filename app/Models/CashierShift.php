@@ -68,6 +68,11 @@ class CashierShift extends Model
         return $this->hasMany(Sale::class);
     }
 
+    public function returns(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SalesReturn::class);
+    }
+
     public function heldCarts(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(HeldCart::class);

@@ -86,6 +86,11 @@ class Sale extends Model
         return $this->hasOne(SaleVoidLog::class);
     }
 
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SalesReturn::class);
+    }
+
     public function isCompleted(): bool
     {
         return $this->status === SaleStatus::COMPLETED;
@@ -94,6 +99,21 @@ class Sale extends Model
     public function isVoided(): bool
     {
         return $this->status === SaleStatus::VOIDED;
+    }
+
+    public function isReturned(): bool
+    {
+        return in_array($this->status, [SaleStatus::RETURNED_PARTIAL, SaleStatus::RETURNED_FULL], true);
+    }
+
+    public function hasReturns(): bool
+    {
+        return $this->returns()->exists();
+    }
+
+    public function getTotalRefundedAmountAttribute(): float
+    {
+        return (float) $this->returns->sum('total_refund_amount');
     }
 
     public function getFormattedTotalAttribute(): string

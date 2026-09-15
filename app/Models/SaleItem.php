@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SaleItem extends Model
 {
@@ -58,5 +59,30 @@ class SaleItem extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(ProductUnit::class, 'product_unit_id');
+    }
+
+    public function returnItems(): HasMany
+    {
+        return $this->hasMany(SalesReturnItem::class);
+    }
+
+    public function getReturnedQuantityAttribute(): int
+    {
+        return (int) $this->returnItems()->sum('quantity');
+    }
+
+    public function getRemainingQuantityAttribute(): int
+    {
+        return max(0, $this->quantity - $this->returned_quantity);
+    }
+
+    public function getFormattedUnitPriceAttribute(): string
+    {
+        return 'Rp ' . number_format($this->unit_price, 0, ',', '.');
+    }
+
+    public function getFormattedSubtotalAttribute(): string
+    {
+        return 'Rp ' . number_format($this->subtotal, 0, ',', '.');
     }
 }

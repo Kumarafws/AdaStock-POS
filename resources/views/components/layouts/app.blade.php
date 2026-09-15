@@ -115,6 +115,14 @@
                     Shift Kasir
                 </a>
 
+                <a href="{{ route('returns.index') }}" 
+                   class="{{ request()->routeIs('returns.*') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">
+                    <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                    </svg>
+                    Retur Penjualan
+                </a>
+
                 @if(auth()->user()->isAdmin() || auth()->user()->isManager())
                     <a href="{{ route('pos.void-logs') }}" 
                        class="{{ request()->routeIs('pos.void-logs') ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all">

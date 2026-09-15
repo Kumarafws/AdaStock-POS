@@ -52,6 +52,16 @@
         </a>
 
         <div class="flex items-center gap-2">
+            @if(!$sale->isVoided() && $sale->status !== \App\Enums\SaleStatus::RETURNED_FULL)
+                <a href="{{ route('returns.create', ['sale_id' => $sale->id]) }}" 
+                   class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                    </svg>
+                    Retur Barang
+                </a>
+            @endif
+
             @if($sale->isCompleted() && $sale->shift->isOpen())
                 <button type="button" 
                         @click="isVoidModalOpen = true"

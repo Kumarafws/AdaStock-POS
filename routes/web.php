@@ -10,6 +10,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\SupplierController;
@@ -121,5 +122,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/shifts/{shift}', [ShiftController::class, 'show'])->name('shifts.show');
         Route::get('/shifts/{shift}/close', [ShiftController::class, 'closeForm'])->name('shifts.close.form');
         Route::post('/shifts/{shift}/close', [ShiftController::class, 'close'])->name('shifts.close');
+
+        // Customer Sales Returns (Retur Penjualan)
+        Route::get('/returns', [SalesReturnController::class, 'index'])->name('returns.index');
+        Route::get('/returns/lookup-sale', [SalesReturnController::class, 'lookupSale'])->name('returns.lookup-sale');
+
+        // Creating and storing returns requires an active shift
+        Route::middleware(EnsureActiveShift::class)->group(function () {
+            Route::get('/returns/create', [SalesReturnController::class, 'create'])->name('returns.create');
+            Route::post('/returns', [SalesReturnController::class, 'store'])->name('returns.store');
+        });
+
+        Route::get('/returns/{salesReturn}', [SalesReturnController::class, 'show'])->name('returns.show');
     });
 });
