@@ -13,6 +13,7 @@ use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockAdjustmentController;
+use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Middleware\EnsureActiveShift;
 use Illuminate\Support\Facades\Route;
@@ -54,11 +55,19 @@ Route::middleware('auth')->group(function () {
             return view('locations.index', compact('locations'));
         })->name('locations.index');
 
-        // Stock Ledger & Adjustments (Admin & Manager)
+        // Stock Ledger, Adjustments & Stock Opname (Admin & Manager)
         Route::get('/inventory/ledger', [InventoryController::class, 'ledger'])->name('inventory.ledger');
         Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');
         Route::get('/adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
         Route::post('/adjustments', [StockAdjustmentController::class, 'store'])->name('adjustments.store');
+
+        Route::get('/opnames', [StockOpnameController::class, 'index'])->name('opnames.index');
+        Route::get('/opnames/create', [StockOpnameController::class, 'create'])->name('opnames.create');
+        Route::post('/opnames', [StockOpnameController::class, 'store'])->name('opnames.store');
+        Route::get('/opnames/{stockOpname}', [StockOpnameController::class, 'show'])->name('opnames.show');
+        Route::post('/opnames/{stockOpname}/counts', [StockOpnameController::class, 'updateCounts'])->name('opnames.update-counts');
+        Route::post('/opnames/{stockOpname}/complete', [StockOpnameController::class, 'complete'])->name('opnames.complete');
+        Route::post('/opnames/{stockOpname}/cancel', [StockOpnameController::class, 'cancel'])->name('opnames.cancel');
 
         // Purchasing & Procurement (Admin & Manager)
         Route::prefix('purchasing')->name('purchasing.')->group(function () {
