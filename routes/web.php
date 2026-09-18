@@ -10,6 +10,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockAdjustmentController;
@@ -93,6 +94,15 @@ Route::middleware('auth')->group(function () {
 
         // Void Audit Logs (Admin & Manager)
         Route::get('/pos/void-logs', [PosController::class, 'voidLogs'])->name('pos.void-logs');
+
+        // Financial & Analytics Reports (Admin & Manager)
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
+            Route::get('/sales/export-csv', [ReportController::class, 'exportSalesCsv'])->name('sales.export-csv');
+            Route::get('/profit', [ReportController::class, 'profit'])->name('profit');
+            Route::get('/shifts', [ReportController::class, 'shifts'])->name('shifts');
+            Route::get('/inventory-valuation', [ReportController::class, 'inventoryValuation'])->name('inventory-valuation');
+        });
     });
 
     // Product & Inventory Read Routes (All authenticated roles: Cashier, Manager, Admin)
