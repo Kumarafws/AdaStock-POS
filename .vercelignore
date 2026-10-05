@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+tests
+phpunit.xml
+adastock_db
+*.sqlite
+node_modules
+.phpunit.result.cache
+storage/*.key
+storage/logs/*

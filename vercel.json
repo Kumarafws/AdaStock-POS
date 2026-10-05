@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.7.4"
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "src": "/build/(.*)",
+      "dest": "/public/build/$1"
+    },
+    {
+      "src": "/(favicon\\.ico|robots\\.txt)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*\\.(?:ico|png|jpg|jpeg|gif|svg|css|js|woff|woff2|ttf|webp))",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "^/(\\.(?:env|git)|composer\\.(?:json|lock)|package(?:-lock)?\\.json|artisan|phpunit\\.xml|storage/|resources/|app/|bootstrap/|routes/|database/|tests/).*",
+      "status": 404
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
+  ]
+}

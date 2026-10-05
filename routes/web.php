@@ -28,7 +28,7 @@ Route::get('/', function () {
 // Guest Authentication Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post')->middleware('throttle:5,1');
 });
 
 // Authenticated Routes
@@ -132,11 +132,11 @@ Route::middleware('auth')->group(function () {
         Route::middleware(EnsureActiveShift::class)->group(function () {
             Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
             Route::get('/pos/search', [PosController::class, 'search'])->name('pos.search');
-            Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
+            Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout')->middleware('throttle:30,1');
             Route::get('/pos/receipt/{sale}', [PosController::class, 'receipt'])->name('pos.receipt');
             Route::post('/pos/hold', [PosController::class, 'hold'])->name('pos.hold');
             Route::post('/pos/recall/{heldCart}', [PosController::class, 'recall'])->name('pos.recall');
-            Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->name('pos.verify-pin');
+            Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->name('pos.verify-pin')->middleware('throttle:5,1');
             Route::post('/pos/sales/{sale}/void', [PosController::class, 'voidSale'])->name('pos.void');
         });
 
