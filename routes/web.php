@@ -120,7 +120,8 @@ Route::middleware('auth')->group(function () {
 
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/users', function () {
-                return view('admin.users.index');
+                $users = \App\Models\User::with('assignedStore')->orderBy('name')->get();
+                return view('admin.users.index', compact('users'));
             })->name('users.index');
         });
     });

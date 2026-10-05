@@ -156,9 +156,7 @@
 
                                 <!-- Status -->
                                 <td class="py-3.5 px-6 text-center">
-                                    <x-badge :variant="$p->is_active ? 'emerald' : 'slate'" size="sm">
-                                        {{ $p->is_active ? 'Aktif' : 'Nonaktif' }}
-                                    </x-badge>
+                                    <x-status-badge :active="$p->is_active" />
                                 </td>
 
                                 <!-- Actions -->

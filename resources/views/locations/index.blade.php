@@ -162,17 +162,7 @@
                     <!-- Footer Row: Status & Actions -->
                     <div class="mt-6 pt-3.5 border-t border-slate-100 flex items-center justify-between">
                         <div>
-                            @if($location->is_active)
-                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    Aktif Operasional
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400">
-                                    <span class="w-2 h-2 rounded-full bg-slate-300"></span>
-                                    Nonaktif
-                                </span>
-                            @endif
+                            <x-status-badge :active="$location->is_active" activeText="Aktif Operasional" />
                         </div>
 
                         @if(auth()->user()->isAdmin())
@@ -212,51 +202,17 @@
                     </div>
                 </div>
             @empty
-                <div class="col-span-full py-12 text-center bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xs">
-                    <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-base font-bold text-slate-800">Tidak ada toko atau gudang yang ditemukan</h3>
-                    <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                        Coba sesuaikan kata kunci pencarian atau filter tipe lokasi yang dipilih.
-                    </p>
-                    @if(request()->hasAny(['search', 'type']))
-                        <div class="mt-4">
-                            <a href="{{ route('locations.index') }}" class="inline-flex items-center text-xs font-semibold text-indigo-600 hover:text-indigo-800">
-                                Reset Pencarian
-                            </a>
-                        </div>
-                    @endif
-                </div>
+                <x-empty-state 
+                    title="Tidak ada toko atau gudang yang ditemukan" 
+                    subtitle="Coba sesuaikan kata kunci pencarian atau filter tipe lokasi yang dipilih."
+                    :resetUrl="request()->hasAny(['search', 'type']) ? route('locations.index') : null" />
             @endforelse
         </div>
 
         @if(auth()->user()->isAdmin())
             <!-- Modal Form (Tambah / Edit Toko & Gudang) -->
-            <div x-show="showModal" 
-                 style="display: none;"
-                 x-transition:enter="transition ease-out duration-200"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition ease-in duration-150"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-                
-                <div @click.away="showModal = false" class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-100">
-                    <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
-                        <div>
-                            <h3 class="text-base font-bold text-slate-900" x-text="isEdit ? 'Edit Data Toko / Gudang' : 'Tambah Toko / Gudang Baru'"></h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Kelola entitas operasional retail dan inventaris fisik.</p>
-                        </div>
-                        <button type="button" @click="showModal = false" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+            <x-modal showVar="showModal" titleVar="isEdit ? 'Edit Data Toko / Gudang' : 'Tambah Toko / Gudang Baru'" maxWidth="max-w-lg">
+                <p class="text-xs text-slate-500 -mt-2 mb-4">Kelola entitas operasional retail dan inventaris fisik.</p>
 
                     <form :action="formUrl" method="POST" class="space-y-4">
                         @csrf
@@ -359,8 +315,7 @@
                             </x-button>
                         </div>
                     </form>
-                </div>
-            </div>
+            </x-modal>
         @endif
 
     </div>

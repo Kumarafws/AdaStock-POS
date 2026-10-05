@@ -88,9 +88,7 @@
                                     </span>
                                 </td>
                                 <td class="py-3.5 px-6 text-center">
-                                    <x-badge :variant="$cat->is_active ? 'emerald' : 'slate'" size="sm">
-                                        {{ $cat->is_active ? 'Aktif' : 'Nonaktif' }}
-                                    </x-badge>
+                                    <x-status-badge :active="$cat->is_active" />
                                 </td>
                                 @if(auth()->user()->isAdmin() || auth()->user()->isManager())
                                     <td class="py-3.5 px-6 text-right">
@@ -138,73 +136,57 @@
         </x-card>
 
         <!-- Modal Form (Create / Edit) -->
-        <div x-show="showModal" 
-             style="display: none;"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            
-            <div @click.away="showModal = false" class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
-                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                    <h3 class="text-base font-bold text-slate-900" x-text="isEdit ? 'Edit Kategori' : 'Tambah Kategori Baru'"></h3>
-                    <button type="button" @click="showModal = false" class="text-slate-400 hover:text-slate-600 p-1">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+        <x-modal show="showModal" maxWidth="max-w-md">
+            <x-slot:header>
+                <h3 class="text-base font-bold text-slate-900" x-text="isEdit ? 'Edit Kategori' : 'Tambah Kategori Baru'"></h3>
+            </x-slot:header>
+
+            <form :action="formUrl" method="POST" class="space-y-4">
+                @csrf
+                <template x-if="isEdit">
+                    <input type="hidden" name="_method" value="PUT">
+                </template>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Kode Kategori</label>
+                    <input type="text" 
+                           name="code" 
+                           x-model="code"
+                           required 
+                           placeholder="Contoh: CAT-FNB"
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 uppercase">
                 </div>
 
-                <form :action="formUrl" method="POST" class="space-y-4">
-                    @csrf
-                    <template x-if="isEdit">
-                        <input type="hidden" name="_method" value="PUT">
-                    </template>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nama Kategori</label>
+                    <input type="text" 
+                           name="name" 
+                           x-model="name"
+                           required 
+                           placeholder="Contoh: Makanan & Minuman"
+                           class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50">
+                </div>
 
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Kode Kategori</label>
-                        <input type="text" 
-                               name="code" 
-                               x-model="code"
-                               required 
-                               placeholder="Contoh: CAT-FNB"
-                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 uppercase">
-                    </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Deskripsi (Opsional)</label>
+                    <textarea name="description" 
+                              x-model="description"
+                              rows="2"
+                              placeholder="Keterangan kategori..."
+                              class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50"></textarea>
+                </div>
 
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nama Kategori</label>
-                        <input type="text" 
-                               name="name" 
-                               x-model="name"
-                               required 
-                               placeholder="Contoh: Makanan & Minuman"
-                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50">
-                    </div>
+                <div class="flex items-center gap-2 pt-1">
+                    <input type="checkbox" id="is_active" name="is_active" value="1" x-model="is_active" class="w-4 h-4 text-indigo-600 rounded">
+                    <label for="is_active" class="text-xs font-semibold text-slate-700 cursor-pointer">Kategori Aktif</label>
+                </div>
 
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Deskripsi (Opsional)</label>
-                        <textarea name="description" 
-                                  x-model="description"
-                                  rows="2"
-                                  placeholder="Keterangan kategori..."
-                                  class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50"></textarea>
-                    </div>
-
-                    <div class="flex items-center gap-2 pt-1">
-                        <input type="checkbox" id="is_active" name="is_active" value="1" x-model="is_active" class="w-4 h-4 text-indigo-600 rounded">
-                        <label for="is_active" class="text-xs font-semibold text-slate-700 cursor-pointer">Kategori Aktif</label>
-                    </div>
-
-                    <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
-                        <x-button type="button" @click="showModal = false" variant="secondary" size="sm">Batal</x-button>
-                        <x-button type="submit" variant="primary" size="sm">Simpan Kategori</x-button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <x-button type="button" @click="showModal = false" variant="secondary" size="sm">Batal</x-button>
+                    <x-button type="submit" variant="primary" size="sm">Simpan Kategori</x-button>
+                </div>
+            </form>
+        </x-modal>
 
     </div>
 </x-layouts.app>

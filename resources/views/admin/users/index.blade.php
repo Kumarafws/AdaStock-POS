@@ -21,7 +21,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        @foreach(\App\Models\User::with('assignedStore')->get() as $u)
+                        @foreach($users as $u)
                             <tr class="hover:bg-slate-50/50 transition-colors">
                                 <td class="py-3.5 px-6">
                                     <div class="flex items-center gap-3">
@@ -56,10 +56,7 @@
                                     @endif
                                 </td>
                                 <td class="py-3.5 px-6 text-center">
-                                    <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                        Aktif
-                                    </span>
+                                    <x-status-badge :active="$u->status === 'active'" activeText="Aktif" inactiveText="Nonaktif" />
                                 </td>
                             </tr>
                         @endforeach

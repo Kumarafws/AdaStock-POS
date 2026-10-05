@@ -24,7 +24,8 @@ class DashboardController extends Controller
 
         $assignedStore = $user->assignedStore;
         $stores = Location::where('type', LocationType::STORE)->where('is_active', true)->get();
+        $locations = Location::orderBy('type')->orderBy('name')->get();
 
-        return view('dashboard.index', compact('user', 'stats', 'assignedStore', 'stores'));
+        return view('dashboard.index', compact('user', 'stats', 'assignedStore', 'stores', 'locations'));
     }
 }

@@ -132,7 +132,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        @foreach(\App\Models\Location::all() as $loc)
+                        @foreach($locations as $loc)
                             <tr class="hover:bg-slate-50/50 transition-colors">
                                 <td class="py-3.5 px-6 font-mono font-bold text-xs text-slate-700">{{ $loc->code }}</td>
                                 <td class="py-3.5 px-6 font-semibold text-slate-900">{{ $loc->name }}</td>
@@ -144,17 +144,7 @@
                                 <td class="py-3.5 px-6 text-slate-500 text-xs truncate max-w-xs">{{ $loc->address ?? '—' }}</td>
                                 <td class="py-3.5 px-6 text-slate-500 text-xs">{{ $loc->phone ?? '—' }}</td>
                                 <td class="py-3.5 px-6 text-center">
-                                    @if($loc->is_active)
-                                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                            Aktif
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                            Nonaktif
-                                        </span>
-                                    @endif
+                                    <x-status-badge :active="$loc->is_active" activeText="Aktif" inactiveText="Nonaktif" />
                                 </td>
                             </tr>
                         @endforeach
