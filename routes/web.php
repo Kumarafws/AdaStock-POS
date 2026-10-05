@@ -17,6 +17,7 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\UserController;
 use App\Http\Middleware\EnsureActiveShift;
 use Illuminate\Support\Facades\Route;
 
@@ -119,10 +120,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
 
         Route::prefix('admin')->name('admin.')->group(function () {
-            Route::get('/users', function () {
-                $users = \App\Models\User::with('assignedStore')->orderBy('name')->get();
-                return view('admin.users.index', compact('users'));
-            })->name('users.index');
+            Route::resource('users', UserController::class)->except(['create', 'show', 'edit']);
         });
     });
 
