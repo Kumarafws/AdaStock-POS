@@ -13,11 +13,32 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full antialiased font-sans text-slate-800 bg-slate-50" x-data="{ sidebarOpen: false }">
+<body class="h-full antialiased font-sans text-slate-800 bg-slate-50" 
+      x-data="{ 
+          mobileOpen: false, 
+          sidebarCollapsed: localStorage.getItem('adastock_sidebar_collapsed') === 'true',
+          toggleSidebar() {
+              if (window.innerWidth < 1024) {
+                  this.mobileOpen = !this.mobileOpen;
+              } else {
+                  this.sidebarCollapsed = !this.sidebarCollapsed;
+                  localStorage.setItem('adastock_sidebar_collapsed', this.sidebarCollapsed);
+              }
+          },
+          closeSidebar() {
+              if (window.innerWidth < 1024) {
+                  this.mobileOpen = false;
+              } else {
+                  this.sidebarCollapsed = true;
+                  localStorage.setItem('adastock_sidebar_collapsed', true);
+              }
+          }
+      }"
+      @keydown.window.alt.m.prevent="toggleSidebar()">
     <div class="min-h-full flex flex-col lg:flex-row">
         
         <!-- Mobile Sidebar Backdrop -->
-        <div x-show="sidebarOpen" 
+        <div x-show="mobileOpen" 
              x-transition:enter="transition-opacity ease-linear duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
@@ -25,29 +46,42 @@
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden" 
-             @click="sidebarOpen = false"></div>
+             @click="mobileOpen = false"
+             x-cloak></div>
 
-        <!-- Sidebar Navigation -->
-        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" 
-               class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0">
+        <!-- Sidebar Navigation (Collapsible on Desktop & Drawer on Mobile) -->
+        <aside x-bind:class="[
+                   mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+                   sidebarCollapsed ? 'lg:w-0 lg:border-r-0 lg:overflow-hidden' : 'lg:w-72 border-r border-slate-800'
+               ]" 
+               class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 ease-in-out lg:static shrink-0">
             
-            <!-- Sidebar Header / Brand -->
-            <div class="h-20 flex items-center justify-between px-6 border-b border-slate-800/80 bg-slate-950/40">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-600 shadow-md shadow-indigo-600/30 flex items-center justify-center text-white font-extrabold text-lg">
-                        AS
-                    </div>
-                    <div>
-                        <span class="text-xl font-bold tracking-tight text-white">Ada<span class="text-indigo-400">Stock</span></span>
-                        <span class="block text-[10px] uppercase font-bold tracking-widest text-slate-400">Retail & POS</span>
-                    </div>
-                </a>
-                <button @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-white p-1">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
+            <!-- Fixed-width inner wrapper to prevent text squishing during collapse transition -->
+            <div class="w-72 h-full flex flex-col shrink-0">
+                <!-- Sidebar Header / Brand -->
+                <div class="h-20 flex items-center justify-between px-6 border-b border-slate-800/80 bg-slate-950/40">
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600 shadow-md shadow-indigo-600/30 flex items-center justify-center text-white font-extrabold text-lg">
+                            AS
+                        </div>
+                        <div>
+                            <span class="text-xl font-bold tracking-tight text-white">Ada<span class="text-indigo-400">Stock</span></span>
+                            <span class="block text-[10px] uppercase font-bold tracking-widest text-slate-400">Retail & POS</span>
+                        </div>
+                    </a>
+                    <!-- Collapse Button in Sidebar Header (Works for both Mobile & Desktop) -->
+                    <button @click="closeSidebar()" 
+                            type="button"
+                            title="Tutup Menu Sidebar" 
+                            class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center">
+                        <svg class="w-5 h-5 hidden lg:block" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+                        </svg>
+                        <svg class="w-5 h-5 lg:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
 
             <!-- Current Store / Context Pill -->
             <div class="p-4 mx-4 mt-4 rounded-2xl bg-slate-800/60 border border-slate-700/60">
@@ -302,19 +336,38 @@
                     </form>
                 </div>
             </div>
+            </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <!-- Main Content Area (Expands smoothly to full width when sidebar is collapsed) -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
             
             <!-- Top Navbar -->
             <header class="h-20 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 lg:px-8">
-                <div class="flex items-center gap-4">
-                    <button @click="sidebarOpen = true" class="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <!-- Universal Sidebar Toggle Button (Mobile & Desktop) -->
+                    <button @click="toggleSidebar()" 
+                            type="button"
+                            :title="sidebarCollapsed ? 'Buka Menu Sidebar (Alt+M)' : 'Tutup Menu Sidebar (Alt+M)'"
+                            class="p-2 text-slate-600 hover:text-indigo-600 rounded-xl hover:bg-slate-100 border border-slate-200/80 transition-all flex items-center gap-2 group shadow-2xs">
+                        <svg class="w-5 h-5 text-slate-700 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                         </svg>
+                        <span class="text-xs font-semibold text-slate-600 group-hover:text-indigo-600 hidden sm:inline"
+                              x-show="sidebarCollapsed"
+                              x-cloak>
+                            Menu
+                        </span>
                     </button>
+
+                    <!-- Mini Brand Logo when Desktop Sidebar is Collapsed -->
+                    <div x-show="sidebarCollapsed" x-cloak class="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-200">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
+                            AS
+                        </div>
+                        <span class="font-bold text-slate-900 text-sm tracking-tight">Ada<span class="text-indigo-600">Stock</span></span>
+                    </div>
+
                     <div>
                         <h1 class="text-xl font-bold text-slate-900 tracking-tight">{{ $header ?? $title ?? 'Dashboard' }}</h1>
                         @if(isset($subtitle))
