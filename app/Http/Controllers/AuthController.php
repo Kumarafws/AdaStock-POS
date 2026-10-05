@@ -29,6 +29,7 @@ class AuthController extends Controller
         $greeting = match ($user->role->value) {
             'admin' => "Selamat datang kembali, Administrator {$user->name}!",
             'manager' => "Selamat bertugas, Manager {$user->name}!",
+            'warehouse' => "Selamat bertugas di Gudang & Logistik, {$user->name}!",
             'cashier' => "Selamat bertugas, {$user->name}! Silakan buka shift kasir sebelum memulai transaksi.",
             default => "Selamat datang, {$user->name}!",
         };

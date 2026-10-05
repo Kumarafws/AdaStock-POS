@@ -84,6 +84,17 @@ class DatabaseSeeder extends Seeder
             'phone' => '081200000003',
         ]);
 
+        User::create([
+            'name' => 'Hendra Wijaya',
+            'username' => 'warehouse',
+            'email' => 'warehouse@adastock.local',
+            'password' => Hash::make('password'),
+            'role' => UserRole::WAREHOUSE,
+            'assigned_store_id' => $warehouse->id,
+            'status' => 'active',
+            'phone' => '081200000004',
+        ]);
+
         // 3. Seed Categories
         $catFnb = Category::create([
             'code' => 'CAT-FNB',

@@ -19,6 +19,7 @@ class PurchaseReturnTest extends TestCase
     protected User $admin;
     protected User $manager;
     protected User $cashier;
+    protected User $warehouseUser;
     protected Supplier $supplier;
     protected Location $warehouse;
     protected Location $quarantine;
@@ -32,6 +33,7 @@ class PurchaseReturnTest extends TestCase
         $this->admin = User::where('username', 'admin')->first();
         $this->manager = User::where('username', 'manager')->first();
         $this->cashier = User::where('username', 'cashier')->first();
+        $this->warehouseUser = User::where('username', 'warehouse')->first();
 
         $this->supplier = Supplier::first();
         $this->warehouse = Location::where('code', 'WHS-01')->first();
@@ -39,17 +41,19 @@ class PurchaseReturnTest extends TestCase
         $this->product = Product::first();
     }
 
-    public function test_manager_can_access_purchase_return_pages_cashier_is_forbidden(): void
+    public function test_warehouse_staff_and_admin_can_access_purchase_return_pages_manager_and_cashier_are_forbidden(): void
     {
         $this->actingAs($this->admin)->get('/purchasing/returns')->assertStatus(200);
-        $this->actingAs($this->manager)->get('/purchasing/returns')->assertStatus(200);
+        $this->actingAs($this->warehouseUser)->get('/purchasing/returns')->assertStatus(200);
+        $this->actingAs($this->manager)->get('/purchasing/returns')->assertStatus(403);
         $this->actingAs($this->cashier)->get('/purchasing/returns')->assertStatus(403);
 
-        $this->actingAs($this->manager)->get('/purchasing/returns/create')->assertStatus(200);
+        $this->actingAs($this->warehouseUser)->get('/purchasing/returns/create')->assertStatus(200);
+        $this->actingAs($this->manager)->get('/purchasing/returns/create')->assertStatus(403);
         $this->actingAs($this->cashier)->get('/purchasing/returns/create')->assertStatus(403);
     }
 
-    public function test_manager_can_create_purchase_return_and_deduct_inventory(): void
+    public function test_warehouse_staff_can_create_purchase_return_and_deduct_inventory(): void
     {
         /** @var InventoryService $inventoryService */
         $inventoryService = app(InventoryService::class);
@@ -57,7 +61,7 @@ class PurchaseReturnTest extends TestCase
 
         $returnQty = 10;
 
-        $response = $this->actingAs($this->manager)->post('/purchasing/returns', [
+        $response = $this->actingAs($this->warehouseUser)->post('/purchasing/returns', [
             'supplier_id' => $this->supplier->id,
             'location_id' => $this->warehouse->id,
             'return_date' => now()->toDateString(),
@@ -90,7 +94,7 @@ class PurchaseReturnTest extends TestCase
         ]);
     }
 
-    public function test_manager_can_return_goods_from_quarantine_location(): void
+    public function test_warehouse_staff_can_return_goods_from_quarantine_location(): void
     {
         /** @var InventoryService $inventoryService */
         $inventoryService = app(InventoryService::class);
@@ -98,7 +102,7 @@ class PurchaseReturnTest extends TestCase
 
         $this->assertGreaterThanOrEqual(1, $initialQuarantineStock);
 
-        $response = $this->actingAs($this->manager)->post('/purchasing/returns', [
+        $response = $this->actingAs($this->warehouseUser)->post('/purchasing/returns', [
             'supplier_id' => $this->supplier->id,
             'location_id' => $this->quarantine->id,
             'return_date' => now()->toDateString(),

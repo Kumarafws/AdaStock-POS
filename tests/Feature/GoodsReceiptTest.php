@@ -23,6 +23,7 @@ class GoodsReceiptTest extends TestCase
     protected User $admin;
     protected User $manager;
     protected User $cashier;
+    protected User $warehouseUser;
     protected Supplier $supplier;
     protected Location $warehouse;
     protected Product $product;
@@ -37,6 +38,7 @@ class GoodsReceiptTest extends TestCase
         $this->admin = User::where('username', 'admin')->first();
         $this->manager = User::where('username', 'manager')->first();
         $this->cashier = User::where('username', 'cashier')->first();
+        $this->warehouseUser = User::where('username', 'warehouse')->first();
 
         $this->supplier = Supplier::first();
         $this->warehouse = Location::where('code', 'WHS-01')->first();
@@ -68,15 +70,20 @@ class GoodsReceiptTest extends TestCase
         ]);
     }
 
-    public function test_manager_can_access_goods_receipt_pages_cashier_is_forbidden(): void
+    public function test_warehouse_staff_and_admin_can_access_goods_receipt_pages_manager_and_cashier_are_forbidden(): void
     {
         $this->actingAs($this->admin)->get('/purchasing/receipts')->assertStatus(200);
-        $this->actingAs($this->manager)->get('/purchasing/receipts')->assertStatus(200);
+        $this->actingAs($this->warehouseUser)->get('/purchasing/receipts')->assertStatus(200);
+        $this->actingAs($this->manager)->get('/purchasing/receipts')->assertStatus(403);
         $this->actingAs($this->cashier)->get('/purchasing/receipts')->assertStatus(403);
+
+        $this->actingAs($this->warehouseUser)
+            ->get("/purchasing/receipts/create?po_id={$this->po->id}")
+            ->assertStatus(200);
 
         $this->actingAs($this->manager)
             ->get("/purchasing/receipts/create?po_id={$this->po->id}")
-            ->assertStatus(200);
+            ->assertStatus(403);
 
         $this->actingAs($this->cashier)
             ->get("/purchasing/receipts/create?po_id={$this->po->id}")
@@ -89,7 +96,7 @@ class GoodsReceiptTest extends TestCase
         $inventoryService = app(InventoryService::class);
         $initialStock = $inventoryService->getStock($this->product, $this->warehouse);
 
-        $response = $this->actingAs($this->manager)->post('/purchasing/receipts', [
+        $response = $this->actingAs($this->warehouseUser)->post('/purchasing/receipts', [
             'purchase_order_id' => $this->po->id,
             'received_date' => now()->format('Y-m-d H:i:s'),
             'delivery_order_number' => 'SJ-SUP-001',
@@ -129,7 +136,7 @@ class GoodsReceiptTest extends TestCase
     public function test_full_receiving_completes_purchase_order(): void
     {
         // First batch: 40
-        $this->actingAs($this->manager)->post('/purchasing/receipts', [
+        $this->actingAs($this->warehouseUser)->post('/purchasing/receipts', [
             'purchase_order_id' => $this->po->id,
             'received_date' => now()->format('Y-m-d H:i:s'),
             'items' => [
@@ -141,7 +148,7 @@ class GoodsReceiptTest extends TestCase
         ]);
 
         // Second batch: remaining 60
-        $this->actingAs($this->manager)->post('/purchasing/receipts', [
+        $this->actingAs($this->warehouseUser)->post('/purchasing/receipts', [
             'purchase_order_id' => $this->po->id,
             'received_date' => now()->format('Y-m-d H:i:s'),
             'items' => [
@@ -160,7 +167,7 @@ class GoodsReceiptTest extends TestCase
 
     public function test_receiving_more_than_remaining_order_is_rejected(): void
     {
-        $response = $this->actingAs($this->manager)->post('/purchasing/receipts', [
+        $response = $this->actingAs($this->warehouseUser)->post('/purchasing/receipts', [
             'purchase_order_id' => $this->po->id,
             'received_date' => now()->format('Y-m-d H:i:s'),
             'items' => [

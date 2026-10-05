@@ -59,10 +59,12 @@ class InventoryTest extends TestCase
         $response->assertDontSee('Semua Lokasi');
     }
 
-    public function test_manager_and_admin_can_view_stock_ledger_cashier_is_forbidden(): void
+    public function test_warehouse_and_admin_can_view_stock_ledger_manager_and_cashier_are_forbidden(): void
     {
+        $warehouse = User::where('username', 'warehouse')->first();
         $this->actingAs($this->admin)->get('/inventory/ledger')->assertStatus(200);
-        $this->actingAs($this->manager)->get('/inventory/ledger')->assertStatus(200);
+        $this->actingAs($warehouse)->get('/inventory/ledger')->assertStatus(200);
+        $this->actingAs($this->manager)->get('/inventory/ledger')->assertStatus(403);
         $this->actingAs($this->cashier)->get('/inventory/ledger')->assertStatus(403);
     }
 

@@ -9,6 +9,9 @@
             } else if(role === 'manager') {
                 this.login = 'manager';
                 this.password = 'password';
+            } else if(role === 'warehouse') {
+                this.login = 'warehouse';
+                this.password = 'password';
             } else if(role === 'cashier') {
                 this.login = 'cashier';
                 this.password = 'password';
@@ -20,17 +23,23 @@
             <p class="text-xs text-slate-500">Silakan masukkan username/email dan kata sandi Anda.</p>
         </div>
 
-        <!-- Quick Demo Switcher -->
-        <div class="mb-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
-            <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Pilih Cepat Akun Demo:</p>
-            <div class="grid grid-cols-3 gap-1.5">
-                <button type="button" @click="setRole('admin')" class="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 text-xs font-semibold border border-indigo-200 transition-colors">
+        <!-- Quick Demo Switcher (4 Roles: Admin, Store Manager, Warehouse Staff, Cashier) -->
+        <div class="mb-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between mb-1.5">
+                <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Pilih Cepat Akun Demo:</p>
+                <span class="text-[10px] text-slate-400 font-medium">Klik untuk isi otomatis</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                <button type="button" @click="setRole('admin')" class="px-2 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 text-xs font-semibold border border-indigo-200 transition-colors text-center">
                     Admin
                 </button>
-                <button type="button" @click="setRole('manager')" class="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 text-xs font-semibold border border-amber-200 transition-colors">
-                    Manager
+                <button type="button" @click="setRole('manager')" class="px-2 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 text-xs font-semibold border border-amber-200 transition-colors text-center">
+                    Manajer Toko
                 </button>
-                <button type="button" @click="setRole('cashier')" class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-700 text-xs font-semibold border border-emerald-200 transition-colors">
+                <button type="button" @click="setRole('warehouse')" class="px-2 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-700 text-xs font-semibold border border-blue-200 transition-colors text-center">
+                    Staf Gudang
+                </button>
+                <button type="button" @click="setRole('cashier')" class="px-2 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-700 text-xs font-semibold border border-emerald-200 transition-colors text-center">
                     Kasir (POS)
                 </button>
             </div>

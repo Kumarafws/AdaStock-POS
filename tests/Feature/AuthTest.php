@@ -25,6 +25,21 @@ class AuthTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Masuk ke Sistem');
         $response->assertSee('Username / Email');
+        $response->assertSee('Admin');
+        $response->assertSee('Manajer Toko');
+        $response->assertSee('Staf Gudang');
+        $response->assertSee('Kasir (POS)');
+    }
+
+    public function test_warehouse_staff_can_authenticate_using_username(): void
+    {
+        $response = $this->post('/login', [
+            'login' => 'warehouse',
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect('/dashboard');
     }
 
     public function test_user_can_authenticate_using_email(): void

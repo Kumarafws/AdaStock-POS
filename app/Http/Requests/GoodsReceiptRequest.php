@@ -8,7 +8,7 @@ class GoodsReceiptRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check() && in_array(auth()->user()->role->value, ['admin', 'manager'], true);
+        return auth()->check() && in_array(auth()->user()->role->value, ['admin', 'warehouse'], true);
     }
 
     public function rules(): array

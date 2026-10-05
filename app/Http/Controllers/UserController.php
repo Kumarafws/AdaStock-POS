@@ -38,10 +38,10 @@ class UserController extends Controller
         }
 
         $users = $query->orderBy('name')->get();
-        $stores = Location::stores()->active()->orderBy('name')->get();
+        $locations = Location::active()->orderBy('type')->orderBy('name')->get();
         $roles = UserRole::cases();
 
-        return view('admin.users.index', compact('users', 'stores', 'roles'));
+        return view('admin.users.index', compact('users', 'locations', 'roles'));
     }
 
     /**

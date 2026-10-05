@@ -6,6 +6,7 @@ enum UserRole: string
 {
     case ADMIN = 'admin';
     case MANAGER = 'manager';
+    case WAREHOUSE = 'warehouse';
     case CASHIER = 'cashier';
 
     public function label(): string
@@ -13,6 +14,7 @@ enum UserRole: string
         return match ($this) {
             self::ADMIN => 'Administrator',
             self::MANAGER => 'Store Manager',
+            self::WAREHOUSE => 'Staf Gudang',
             self::CASHIER => 'Kasir (POS)',
         };
     }
@@ -22,6 +24,7 @@ enum UserRole: string
         return match ($this) {
             self::ADMIN => 'bg-indigo-50 text-indigo-700 ring-indigo-700/10 border-indigo-200',
             self::MANAGER => 'bg-amber-50 text-amber-700 ring-amber-600/10 border-amber-200',
+            self::WAREHOUSE => 'bg-sky-50 text-sky-700 ring-sky-600/10 border-sky-200',
             self::CASHIER => 'bg-emerald-50 text-emerald-700 ring-emerald-600/10 border-emerald-200',
         };
     }
@@ -29,6 +32,16 @@ enum UserRole: string
     public function canManageUsers(): bool
     {
         return $this === self::ADMIN;
+    }
+
+    public function canManageWarehouse(): bool
+    {
+        return in_array($this, [self::ADMIN, self::WAREHOUSE]);
+    }
+
+    public function canManageRetail(): bool
+    {
+        return in_array($this, [self::ADMIN, self::MANAGER]);
     }
 
     public function canApproveOperations(): bool

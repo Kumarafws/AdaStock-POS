@@ -57,6 +57,11 @@ class User extends Authenticatable
         return $this->role === UserRole::MANAGER;
     }
 
+    public function isWarehouse(): bool
+    {
+        return $this->role === UserRole::WAREHOUSE;
+    }
+
     public function isCashier(): bool
     {
         return $this->role === UserRole::CASHIER;

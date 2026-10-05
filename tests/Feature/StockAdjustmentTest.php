@@ -21,6 +21,7 @@ class StockAdjustmentTest extends TestCase
     protected User $admin;
     protected User $manager;
     protected User $cashier;
+    protected User $warehouseStaff;
     protected Location $warehouse;
     protected Location $store;
     protected Location $quarantine;
@@ -34,6 +35,7 @@ class StockAdjustmentTest extends TestCase
         $this->admin = User::where('username', 'admin')->first();
         $this->manager = User::where('username', 'manager')->first();
         $this->cashier = User::where('username', 'cashier')->first();
+        $this->warehouseStaff = User::where('username', 'warehouse')->first();
 
         $this->warehouse = Location::where('code', 'WHS-01')->first();
         $this->store = Location::where('code', 'STR-01')->first();
@@ -42,23 +44,25 @@ class StockAdjustmentTest extends TestCase
         $this->product = Product::first();
     }
 
-    public function test_manager_and_admin_can_access_adjustment_pages_cashier_is_forbidden(): void
+    public function test_warehouse_staff_and_admin_can_access_adjustment_pages_manager_and_cashier_are_forbidden(): void
     {
         $this->actingAs($this->admin)->get('/adjustments')->assertStatus(200);
-        $this->actingAs($this->manager)->get('/adjustments')->assertStatus(200);
+        $this->actingAs($this->warehouseStaff)->get('/adjustments')->assertStatus(200);
+        $this->actingAs($this->manager)->get('/adjustments')->assertStatus(403);
         $this->actingAs($this->cashier)->get('/adjustments')->assertStatus(403);
 
-        $this->actingAs($this->manager)->get('/adjustments/create')->assertStatus(200);
+        $this->actingAs($this->warehouseStaff)->get('/adjustments/create')->assertStatus(200);
+        $this->actingAs($this->manager)->get('/adjustments/create')->assertStatus(403);
         $this->actingAs($this->cashier)->get('/adjustments/create')->assertStatus(403);
     }
 
-    public function test_manager_can_create_positive_stock_adjustment(): void
+    public function test_warehouse_staff_can_create_positive_stock_adjustment(): void
     {
         /** @var InventoryService $inventoryService */
         $inventoryService = app(InventoryService::class);
         $initialStock = $inventoryService->getStock($this->product, $this->store);
 
-        $response = $this->actingAs($this->manager)->post('/adjustments', [
+        $response = $this->actingAs($this->warehouseStaff)->post('/adjustments', [
             'location_id' => $this->store->id,
             'product_id' => $this->product->id,
             'type' => 'in',
@@ -94,13 +98,13 @@ class StockAdjustmentTest extends TestCase
         ]);
     }
 
-    public function test_manager_can_create_negative_stock_adjustment(): void
+    public function test_warehouse_staff_can_create_negative_stock_adjustment(): void
     {
         /** @var InventoryService $inventoryService */
         $inventoryService = app(InventoryService::class);
         $initialStock = $inventoryService->getStock($this->product, $this->store);
 
-        $response = $this->actingAs($this->manager)->post('/adjustments', [
+        $response = $this->actingAs($this->warehouseStaff)->post('/adjustments', [
             'location_id' => $this->store->id,
             'product_id' => $this->product->id,
             'type' => 'out',
@@ -134,7 +138,7 @@ class StockAdjustmentTest extends TestCase
 
         $damageQty = 4;
 
-        $response = $this->actingAs($this->manager)->post('/adjustments', [
+        $response = $this->actingAs($this->warehouseStaff)->post('/adjustments', [
             'location_id' => $this->store->id,
             'product_id' => $this->product->id,
             'type' => 'out',
@@ -206,7 +210,7 @@ class StockAdjustmentTest extends TestCase
         $inventoryService = app(InventoryService::class);
         $currentStock = $inventoryService->getStock($this->product, $this->store);
 
-        $response = $this->actingAs($this->manager)->post('/adjustments', [
+        $response = $this->actingAs($this->warehouseStaff)->post('/adjustments', [
             'location_id' => $this->store->id,
             'product_id' => $this->product->id,
             'type' => 'out',

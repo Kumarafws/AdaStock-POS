@@ -11,8 +11,8 @@ class StockAdjustmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Only admin and manager can perform stock adjustments
-        return auth()->check() && in_array(auth()->user()->role->value, ['admin', 'manager'], true);
+        // Only admin and warehouse staff can perform stock adjustments
+        return auth()->check() && in_array(auth()->user()->role->value, ['admin', 'warehouse'], true);
     }
 
     public function rules(): array

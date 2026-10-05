@@ -37,9 +37,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Admin & Manager Only Routes (Master Data Management)
+    // Admin & Manager Only Routes (Retail Management, Master Data, PO Creation, Financial Reports)
     Route::middleware('role:admin,manager')->group(function () {
-        // Product Management (Write)
+        // Product Management (Write: Admin & Manager)
         Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
         Route::post('/products', [ProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
         Route::patch('/products/{product}/toggle', [ProductController::class, 'toggleStatus'])->name('products.toggle');
 
-        // Categories, Brands, Suppliers
+        // Categories, Brands, Suppliers (Master Data Management)
         Route::resource('categories', CategoryController::class)->except(['create', 'show', 'edit']);
         Route::resource('brands', BrandController::class)->except(['create', 'show', 'edit']);
         Route::resource('suppliers', SupplierController::class)->except(['create', 'show', 'edit']);
@@ -55,40 +55,11 @@ Route::middleware('auth')->group(function () {
         // Locations (Read: Admin & Manager)
         Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');
 
-        // Stock Ledger, Adjustments & Stock Opname (Admin & Manager)
-        Route::get('/inventory/ledger', [InventoryController::class, 'ledger'])->name('inventory.ledger');
-        Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');
-        Route::get('/adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
-        Route::post('/adjustments', [StockAdjustmentController::class, 'store'])->name('adjustments.store');
-
-        Route::get('/opnames', [StockOpnameController::class, 'index'])->name('opnames.index');
-        Route::get('/opnames/create', [StockOpnameController::class, 'create'])->name('opnames.create');
-        Route::post('/opnames', [StockOpnameController::class, 'store'])->name('opnames.store');
-        Route::get('/opnames/{stockOpname}', [StockOpnameController::class, 'show'])->name('opnames.show');
-        Route::post('/opnames/{stockOpname}/counts', [StockOpnameController::class, 'updateCounts'])->name('opnames.update-counts');
-        Route::post('/opnames/{stockOpname}/complete', [StockOpnameController::class, 'complete'])->name('opnames.complete');
-        Route::post('/opnames/{stockOpname}/cancel', [StockOpnameController::class, 'cancel'])->name('opnames.cancel');
-
-        // Purchasing & Procurement (Admin & Manager)
+        // Purchase Order Management (Write: PO Creation & Cancellation by Admin & Store Manager)
         Route::prefix('purchasing')->name('purchasing.')->group(function () {
-            // Purchase Orders
-            Route::get('/orders', [PurchaseOrderController::class, 'index'])->name('orders.index');
             Route::get('/orders/create', [PurchaseOrderController::class, 'create'])->name('orders.create');
             Route::post('/orders', [PurchaseOrderController::class, 'store'])->name('orders.store');
-            Route::get('/orders/{order}', [PurchaseOrderController::class, 'show'])->name('orders.show');
             Route::post('/orders/{order}/cancel', [PurchaseOrderController::class, 'cancel'])->name('orders.cancel');
-
-            // Goods Receipts (Penerimaan Barang)
-            Route::get('/receipts', [GoodsReceiptController::class, 'index'])->name('receipts.index');
-            Route::get('/receipts/create', [GoodsReceiptController::class, 'create'])->name('receipts.create');
-            Route::post('/receipts', [GoodsReceiptController::class, 'store'])->name('receipts.store');
-            Route::get('/receipts/{receipt}', [GoodsReceiptController::class, 'show'])->name('receipts.show');
-
-            // Purchase Returns (Retur Supplier)
-            Route::get('/returns', [PurchaseReturnController::class, 'index'])->name('returns.index');
-            Route::get('/returns/create', [PurchaseReturnController::class, 'create'])->name('returns.create');
-            Route::post('/returns', [PurchaseReturnController::class, 'store'])->name('returns.store');
-            Route::get('/returns/{return}', [PurchaseReturnController::class, 'show'])->name('returns.show');
         });
 
         // Void Audit Logs (Admin & Manager)
@@ -102,6 +73,46 @@ Route::middleware('auth')->group(function () {
             Route::get('/shifts', [ReportController::class, 'shifts'])->name('shifts');
             Route::get('/inventory-valuation', [ReportController::class, 'inventoryValuation'])->name('inventory-valuation');
         });
+    });
+
+    // Admin & Warehouse Only Routes (Physical Warehouse Operations: Goods Receipt, Returns, Adjustments, Ledger)
+    Route::middleware('role:admin,warehouse')->group(function () {
+        // Stock Ledger & Adjustments (Dedicated to Warehouse Staff & Admin)
+        Route::get('/inventory/ledger', [InventoryController::class, 'ledger'])->name('inventory.ledger');
+        Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');
+        Route::get('/adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
+        Route::post('/adjustments', [StockAdjustmentController::class, 'store'])->name('adjustments.store');
+
+        // Goods Receipts & Purchase Returns (Dedicated to Warehouse Staff & Admin)
+        Route::prefix('purchasing')->name('purchasing.')->group(function () {
+            // Goods Receipts (Penerimaan Fisik Barang dari Supplier)
+            Route::get('/receipts', [GoodsReceiptController::class, 'index'])->name('receipts.index');
+            Route::get('/receipts/create', [GoodsReceiptController::class, 'create'])->name('receipts.create');
+            Route::post('/receipts', [GoodsReceiptController::class, 'store'])->name('receipts.store');
+            Route::get('/receipts/{receipt}', [GoodsReceiptController::class, 'show'])->name('receipts.show');
+
+            // Purchase Returns (Retur Fisik Barang Rusak/Cacat ke Supplier)
+            Route::get('/returns', [PurchaseReturnController::class, 'index'])->name('returns.index');
+            Route::get('/returns/create', [PurchaseReturnController::class, 'create'])->name('returns.create');
+            Route::post('/returns', [PurchaseReturnController::class, 'store'])->name('returns.store');
+            Route::get('/returns/{return}', [PurchaseReturnController::class, 'show'])->name('returns.show');
+        });
+    });
+
+    // Shared Operations (Admin, Manager, & Warehouse Staff)
+    Route::middleware('role:admin,manager,warehouse')->group(function () {
+        // Purchase Orders Read-Only (Warehouse needs to view PO to receive items)
+        Route::get('/purchasing/orders', [PurchaseOrderController::class, 'index'])->name('purchasing.orders.index');
+        Route::get('/purchasing/orders/{order}', [PurchaseOrderController::class, 'show'])->name('purchasing.orders.show');
+
+        // Stock Opname (Multi-location Physical Stock Counting)
+        Route::get('/opnames', [StockOpnameController::class, 'index'])->name('opnames.index');
+        Route::get('/opnames/create', [StockOpnameController::class, 'create'])->name('opnames.create');
+        Route::post('/opnames', [StockOpnameController::class, 'store'])->name('opnames.store');
+        Route::get('/opnames/{stockOpname}', [StockOpnameController::class, 'show'])->name('opnames.show');
+        Route::post('/opnames/{stockOpname}/counts', [StockOpnameController::class, 'updateCounts'])->name('opnames.update-counts');
+        Route::post('/opnames/{stockOpname}/complete', [StockOpnameController::class, 'complete'])->name('opnames.complete');
+        Route::post('/opnames/{stockOpname}/cancel', [StockOpnameController::class, 'cancel'])->name('opnames.cancel');
     });
 
     // Product & Inventory Read Routes (All authenticated roles: Cashier, Manager, Admin)

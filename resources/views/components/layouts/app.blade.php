@@ -129,56 +129,60 @@
                     Saldo Inventori
                 </x-sidebar-link>
 
-                <!-- POS Section (Cashier, Manager, Admin) -->
-                <x-sidebar-link :href="route('pos.index')" :active="request()->routeIs('pos.*')" variant="emerald">
-                    <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                    </svg>
-                    Kasir (POS)
-                </x-sidebar-link>
-
-                <x-sidebar-link :href="route('shifts.index')" :active="request()->routeIs('shifts.*')">
-                    <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Shift Kasir
-                </x-sidebar-link>
-
-                <x-sidebar-link :href="route('returns.index')" :active="request()->routeIs('returns.*')">
-                    <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                    </svg>
-                    Retur Penjualan
-                </x-sidebar-link>
-
-                @if(auth()->user()->isAdmin() || auth()->user()->isManager())
-                    <x-sidebar-link :href="route('pos.void-logs')" :active="request()->routeIs('pos.void-logs')">
-                        <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                <!-- POS Section (Cashier, Manager, Admin - Excluded for Warehouse) -->
+                @if(!auth()->user()->isWarehouse())
+                    <x-sidebar-link :href="route('pos.index')" :active="request()->routeIs('pos.*')" variant="emerald">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                         </svg>
-                        Log Transaksi Void
+                        Kasir (POS)
                     </x-sidebar-link>
+
+                    <x-sidebar-link :href="route('shifts.index')" :active="request()->routeIs('shifts.*')">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Shift Kasir
+                    </x-sidebar-link>
+
+                    <x-sidebar-link :href="route('returns.index')" :active="request()->routeIs('returns.*')">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                        </svg>
+                        Retur Penjualan
+                    </x-sidebar-link>
+
+                    @if(auth()->user()->isAdmin() || auth()->user()->isManager())
+                        <x-sidebar-link :href="route('pos.void-logs')" :active="request()->routeIs('pos.void-logs')">
+                            <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            Log Transaksi Void
+                        </x-sidebar-link>
+                    @endif
                 @endif
 
-                <!-- Inventory & Operations (Admin & Manager) -->
-                @if(auth()->user()->isAdmin() || auth()->user()->isManager())
+                <!-- Stock Management & Physical Operations -->
+                @if(auth()->user()->isAdmin() || auth()->user()->isWarehouse() || auth()->user()->isManager())
                     <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         Manajemen Stok & Mutasi
                     </div>
 
-                    <x-sidebar-link :href="route('inventory.ledger')" :active="request()->routeIs('inventory.ledger')">
-                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                        </svg>
-                        Buku Besar Stok
-                    </x-sidebar-link>
+                    @if(auth()->user()->isAdmin() || auth()->user()->isWarehouse())
+                        <x-sidebar-link :href="route('inventory.ledger')" :active="request()->routeIs('inventory.ledger')">
+                            <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                            </svg>
+                            Buku Besar Stok
+                        </x-sidebar-link>
 
-                    <x-sidebar-link :href="route('adjustments.index')" :active="request()->routeIs('adjustments.*')">
-                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                        </svg>
-                        Penyesuaian Stok
-                    </x-sidebar-link>
+                        <x-sidebar-link :href="route('adjustments.index')" :active="request()->routeIs('adjustments.*')">
+                            <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
+                            Penyesuaian Stok
+                        </x-sidebar-link>
+                    @endif
 
                     <x-sidebar-link :href="route('opnames.index')" :active="request()->routeIs('opnames.*')">
                         <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
@@ -198,20 +202,25 @@
                         Pesanan Pembelian (PO)
                     </x-sidebar-link>
 
-                    <x-sidebar-link :href="route('purchasing.receipts.index')" :active="request()->routeIs('purchasing.receipts.*')">
-                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25h1.125c.621 0 1.125.504 1.125 1.125v3.75m-6.75-4.875H6a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25h1.5" />
-                        </svg>
-                        Penerimaan Barang (GR)
-                    </x-sidebar-link>
+                    @if(auth()->user()->isAdmin() || auth()->user()->isWarehouse())
+                        <x-sidebar-link :href="route('purchasing.receipts.index')" :active="request()->routeIs('purchasing.receipts.*')">
+                            <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25h1.125c.621 0 1.125.504 1.125 1.125v3.75m-6.75-4.875H6a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25h1.5" />
+                            </svg>
+                            Penerimaan Barang (GR)
+                        </x-sidebar-link>
 
-                    <x-sidebar-link :href="route('purchasing.returns.index')" :active="request()->routeIs('purchasing.returns.*')">
-                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15m0 0l6.75 6.75M4.5 12l6.75-6.75" />
-                        </svg>
-                        Retur Supplier
-                    </x-sidebar-link>
+                        <x-sidebar-link :href="route('purchasing.returns.index')" :active="request()->routeIs('purchasing.returns.*')">
+                            <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15m0 0l6.75 6.75M4.5 12l6.75-6.75" />
+                            </svg>
+                            Retur Supplier
+                        </x-sidebar-link>
+                    @endif
+                @endif
 
+                <!-- Financial Reports (Admin & Store Manager Only - Excluded for Warehouse) -->
+                @if(auth()->user()->isAdmin() || auth()->user()->isManager())
                     <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         Laporan & Finansial
                     </div>
@@ -244,6 +253,7 @@
                         Valuasi Aset Stok
                     </x-sidebar-link>
 
+                    <!-- Master Data Management (Admin & Manager) -->
                     <div class="pt-5 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         Manajemen Master
                     </div>
