@@ -158,15 +158,15 @@
 
                                     <!-- Received Qty Today Input -->
                                     <td class="px-6 py-4 text-right whitespace-nowrap">
-                                        <div class="relative max-w-[150px] ml-auto">
+                                        <div class="flex rounded-xl shadow-2xs border border-slate-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 overflow-hidden max-w-[160px] ml-auto {{ $item->remaining_quantity_base == 0 ? 'bg-slate-100' : 'bg-white' }}">
                                             <input type="number" 
                                                    name="items[{{ $idx }}][received_quantity_base]" 
                                                    value="{{ old("items.{$idx}.received_quantity_base", $item->remaining_quantity_base) }}" 
                                                    min="0" 
                                                    max="{{ $item->remaining_quantity_base }}" 
-                                                   class="w-full rounded-xl border-slate-300 text-sm font-extrabold tabular-nums text-right focus:border-indigo-500 focus:ring-indigo-500 py-2 pr-10 {{ $item->remaining_quantity_base == 0 ? 'bg-slate-100 text-slate-400' : 'bg-white' }}"
+                                                   class="w-full border-0 text-sm font-extrabold tabular-nums text-right py-2 px-2.5 focus:ring-0 focus:outline-none bg-transparent"
                                                    {{ $item->remaining_quantity_base == 0 ? 'readonly' : '' }}>
-                                            <span class="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-slate-400 pointer-events-none">
+                                            <span class="inline-flex items-center px-2.5 bg-slate-100 text-slate-600 text-xs font-semibold border-l border-slate-200 select-none whitespace-nowrap shrink-0">
                                                 {{ $item->product->base_unit_name }}
                                             </span>
                                         </div>
@@ -174,13 +174,14 @@
 
                                     <!-- Actual Unit Cost Input -->
                                     <td class="px-6 py-4 text-right whitespace-nowrap">
-                                        <div class="relative max-w-[150px] ml-auto">
+                                        <div class="flex rounded-xl shadow-2xs border border-slate-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 overflow-hidden max-w-[160px] ml-auto bg-white">
+                                            <span class="inline-flex items-center px-2.5 bg-slate-100 text-slate-500 text-xs font-bold border-r border-slate-200 select-none shrink-0">Rp</span>
                                             <input type="number" 
                                                    name="items[{{ $idx }}][actual_unit_cost]" 
                                                    value="{{ old("items.{$idx}.actual_unit_cost", $item->base_unit_cost) }}" 
                                                    min="0" 
-                                                   step="50"
-                                                   class="w-full rounded-xl border-slate-300 text-sm font-bold tabular-nums text-right focus:border-indigo-500 focus:ring-indigo-500 py-2">
+                                                   step="50" 
+                                                   class="w-full border-0 text-sm font-extrabold tabular-nums text-right py-2 px-2.5 focus:ring-0 focus:outline-none bg-transparent">
                                         </div>
                                     </td>
 

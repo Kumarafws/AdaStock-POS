@@ -148,7 +148,7 @@
 
                     <button type="button" 
                             @click="addItem()" 
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs transition-colors">
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 font-semibold text-xs transition-colors border border-indigo-200/80">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
@@ -156,9 +156,19 @@
                     </button>
                 </div>
 
+                <!-- Table Column Headers on Desktop -->
+                <div class="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-100/80 rounded-xl text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 border border-slate-200/60">
+                    <span class="w-7 text-center">#</span>
+                    <span class="flex-1 min-w-[200px]">Produk yang Diretur</span>
+                    <span class="w-40 text-center">Jumlah (Qty)</span>
+                    <span class="w-44 text-center">Harga Beli Satuan</span>
+                    <span class="w-36 text-right">Subtotal</span>
+                    <span class="w-9 text-center">Aksi</span>
+                </div>
+
                 <div class="space-y-3">
                     <template x-for="(item, index) in items" :key="index">
-                        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col md:flex-row items-start md:items-center gap-3 transition-all">
+                        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col md:flex-row items-start md:items-center gap-3 transition-all hover:bg-white hover:shadow-xs">
                             
                             <div class="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-extrabold shrink-0" x-text="index + 1"></div>
 
@@ -168,7 +178,7 @@
                                 <select :name="`items[${index}][product_id]`" 
                                         x-model="item.product_id" 
                                         @change="onProductChange(index)"
-                                        class="w-full rounded-xl border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500 py-2" required>
+                                        class="w-full rounded-xl border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500 py-2 bg-white" required>
                                     <option value="">-- Pilih Produk --</option>
                                     <template x-for="p in products" :key="p.id">
                                         <option :value="p.id" x-text="`[${p.sku}] ${p.name}`"></option>
@@ -176,38 +186,41 @@
                                 </select>
                             </div>
 
-                            <!-- Qty (Base Unit) -->
-                            <div class="w-full md:w-32 shrink-0">
+                            <!-- Qty (Base Unit) with Attached Unit Suffix Badge -->
+                            <div class="w-full md:w-40 shrink-0">
                                 <label class="block md:hidden text-[10px] font-bold uppercase text-slate-500 mb-1">Jumlah</label>
-                                <div class="relative">
+                                <div class="flex rounded-xl shadow-2xs border border-slate-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 overflow-hidden bg-white">
                                     <input type="number" 
                                            :name="`items[${index}][quantity]`" 
                                            x-model="item.quantity" 
                                            min="1" 
-                                           class="w-full rounded-xl border-slate-300 text-sm font-bold tabular-nums text-right focus:border-indigo-500 focus:ring-indigo-500 py-2 pr-10" required>
-                                    <span class="absolute inset-y-0 right-2 flex items-center text-xs text-slate-400 font-semibold" x-text="item.unit_name"></span>
+                                           class="w-full border-0 text-sm font-bold tabular-nums text-right py-2 px-2.5 focus:ring-0 focus:outline-none" required>
+                                    <span class="inline-flex items-center px-2.5 bg-slate-100 text-slate-600 text-xs font-semibold border-l border-slate-200 select-none whitespace-nowrap shrink-0" x-text="item.unit_name"></span>
                                 </div>
                             </div>
 
-                            <!-- Unit Cost -->
-                            <div class="w-full md:w-36 shrink-0">
-                                <label class="block md:hidden text-[10px] font-bold uppercase text-slate-500 mb-1">Harga Beli</label>
-                                <input type="number" 
-                                       :name="`items[${index}][unit_cost]`" 
-                                       x-model="item.unit_cost" 
-                                       min="0" 
-                                       step="50"
-                                       class="w-full rounded-xl border-slate-300 text-sm font-bold tabular-nums text-right focus:border-indigo-500 focus:ring-indigo-500 py-2" required>
+                            <!-- Unit Cost with Attached Rp Prefix Badge -->
+                            <div class="w-full md:w-44 shrink-0">
+                                <label class="block md:hidden text-[10px] font-bold uppercase text-slate-500 mb-1">Harga Beli Satuan</label>
+                                <div class="flex rounded-xl shadow-2xs border border-slate-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 overflow-hidden bg-white">
+                                    <span class="inline-flex items-center px-2.5 bg-slate-100 text-slate-500 text-xs font-bold border-r border-slate-200 select-none shrink-0">Rp</span>
+                                    <input type="number" 
+                                           :name="`items[${index}][unit_cost]`" 
+                                           x-model="item.unit_cost" 
+                                           min="0" 
+                                           step="50" 
+                                           class="w-full border-0 text-sm font-bold tabular-nums text-right py-2 px-2.5 focus:ring-0 focus:outline-none" required>
+                                </div>
                             </div>
 
                             <!-- Subtotal -->
                             <div class="w-full md:w-36 text-right shrink-0">
-                                <span class="text-[10px] text-slate-400 block uppercase font-bold">Subtotal</span>
+                                <span class="text-[10px] text-slate-400 block md:hidden uppercase font-bold">Subtotal</span>
                                 <span class="font-extrabold text-sm text-slate-900 tabular-nums" x-text="'Rp ' + Number(item.quantity * item.unit_cost).toLocaleString('id-ID')"></span>
                             </div>
 
                             <!-- Remove Button -->
-                            <div class="shrink-0 pt-2 md:pt-0">
+                            <div class="w-9 shrink-0 flex justify-center pt-2 md:pt-0">
                                 <button type="button" 
                                         @click="removeItem(index)" 
                                         class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors" 
