@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
@@ -50,11 +51,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('brands', BrandController::class)->except(['create', 'show', 'edit']);
         Route::resource('suppliers', SupplierController::class)->except(['create', 'show', 'edit']);
 
-        // Locations
-        Route::get('/locations', function () {
-            $locations = \App\Models\Location::withCount('users')->get();
-            return view('locations.index', compact('locations'));
-        })->name('locations.index');
+        // Locations (Read: Admin & Manager)
+        Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');
 
         // Stock Ledger, Adjustments & Stock Opname (Admin & Manager)
         Route::get('/inventory/ledger', [InventoryController::class, 'ledger'])->name('inventory.ledger');
@@ -114,10 +112,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/inventory/check-stock', [InventoryController::class, 'checkStock'])->name('inventory.check-stock');
 
     // Admin-Only Routes
-    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/users', function () {
-            return view('admin.users.index');
-        })->name('users.index');
+    Route::middleware('role:admin')->group(function () {
+        // Location Management (Write: Admin Only)
+        Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
+        Route::put('/locations/{location}', [LocationController::class, 'update'])->name('locations.update');
+        Route::delete('/locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
+
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::get('/users', function () {
+                return view('admin.users.index');
+            })->name('users.index');
+        });
     });
 
     // Cashier Routes (POS & Shift)
